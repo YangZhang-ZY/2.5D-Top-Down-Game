@@ -2,10 +2,9 @@
 
 Files:
 - IState<TContext>      : Interface for all states
-- StateBase<TContext>   : Abstract base, override OnEnter/OnUpdate/OnExit
+- StateBase<TContext>   : Abstract base, override Enter/Update/Exit
 - StateMachine<TContext>: Runs states, handles transitions
 - StateTransition       : Condition + target state
-- StateMachineRunner    : Optional MonoBehaviour to drive Update (or call Update manually)
 
 Basic usage (e.g. in PlayerController):
 
@@ -21,7 +20,7 @@ Basic usage (e.g. in PlayerController):
 State example:
   public class IdleState : StateBase<PlayerController>
   {
-    public override void OnUpdate(PlayerController ctx, float dt)
+    public override void Update(PlayerController ctx, float dt)
     {
       // optional: check internal transition
       if (ctx.SomeCondition) ctx.RequestStateChange(attackState);
