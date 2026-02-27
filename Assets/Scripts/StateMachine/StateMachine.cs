@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -17,6 +18,9 @@ namespace StateMachine
         /// <summary>Current active state.</summary>
         public IState<TContext> CurrentState => _currentState;
 
+        /// <summary>Invoked when state changes (oldState, newState). Subscribe for debug logging.</summary>
+        public event Action<IState<TContext>, IState<TContext>> OnStateChanged;
+
         /// <summary>
         /// Initialize the state machine with context and starting state.
         /// </summary>
@@ -26,6 +30,7 @@ namespace StateMachine
             _currentState = initialState;
             _currentState?.Enter(_context);
             _initialized = true;
+            OnStateChanged?.Invoke(null, _currentState);
         }
 
         /// <summary>
@@ -52,9 +57,11 @@ namespace StateMachine
         public void SetState(IState<TContext> newState)
         {
             if (newState == null) return;
+            var oldState = _currentState;
             _currentState?.Exit(_context);
             _currentState = newState;
             _currentState.Enter(_context);
+            OnStateChanged?.Invoke(oldState, _currentState);
         }
 
         /// <summary>

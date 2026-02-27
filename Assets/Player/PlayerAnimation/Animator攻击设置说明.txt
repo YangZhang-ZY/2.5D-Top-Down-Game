@@ -1,0 +1,143 @@
+================================================================================
+                    Animator 攻击动画设置说明（四向 + 攻击顺序）
+================================================================================
+
+一、PlayerAttackState 的修改内容
+--------------------------------------------------------------------------------
+1. Enter：进入攻击时
+   - 重置 attackFinished
+   - 停止移动
+   - 启动攻击冷却
+   - 按 attackSequenceIndex 执行对应段，调用 StartStep(attackSequenceIndex)
+
+2. Update：每帧
+   - 当前段 duration 结束 → 设置 attackFinished = true → 回到 Idle
+
+3. StartStep(step)：开始指定段
+   - 从 attackSteps[step-1] 读取 duration、recoveryTime、lungeDistance
+   - 设置 Animator：IsAttacking=true, ComboStep=step, MoveX, MoveY
+
+4. Exit：离开攻击时
+   - 设置 recoveryTime（本段结束后多久才能按下次攻击）
+   - 推进 attackSequenceIndex（1→2→3→1）
+   - 冲刺状态不刷新 attackSequenceIndex
+
+
+二、Animator 必须添加的参数
+--------------------------------------------------------------------------------
+在 Animator 窗口左上角 Parameters 中，点击 + 添加：
+
+| 参数名       | 类型  | 说明                          |
+|--------------|-------|-------------------------------|
+| IsAttacking  | Bool  | 是否在攻击（代码会设为 true） |
+| ComboStep    | Int   | 1=第1段, 2=第2段              |
+| IsDashing    | Bool  | 是否在冲刺（代码会设为 true） |
+| MoveX        | Float | 攻击/冲刺方向 X（已有可复用） |
+| MoveY        | Float | 攻击/冲刺方向 Y（已有可复用） |
+
+注意：参数名必须与代码完全一致，区分大小写。
+
+
+三、Animator 状态结构
+--------------------------------------------------------------------------------
+建议结构（攻击顺序制，无连击）：
+
+  [Idle]  [Move]
+    | \   / |
+    |  \ /  |
+    |   X   |
+    |  / \  |
+    v /   \ v
+  [Attack1] [Attack2]  ← 四向 Blend Tree，按 ComboStep 从 Idle/Move 直接进入
+    |         |
+    | !IsAttacking
+    v         v
+  [Idle]
+
+
+四、具体操作步骤
+--------------------------------------------------------------------------------
+
+步骤 1：创建 Attack1 状态
+  - 右键 Animator 空白处 → Create State → From New Blend Tree
+  - 命名为 "Attack1"
+  - 双击 Attack1，进入 Blend Tree 编辑
+  - Blend Type: 2D Simple Directional
+  - Parameters: MoveX, MoveY
+  - 添加 4 个 Motion：Attack1_Down(0,-1), Attack1_Up(0,1), Attack1_Left(-1,0), Attack1_Right(1,0)
+
+步骤 2：创建 Attack2 状态
+  - 同上，创建 Attack2 Blend Tree
+  - 添加 4 个 Motion：Attack2_Down, Attack2_Up, Attack2_Left, Attack2_Right
+
+步骤 3：Idle → Attack1
+  - 右键 Idle → Make Transition → 指向 Attack1
+  - 选中该 Transition 线
+  - Conditions: 添加 IsAttacking == true
+  - 取消勾选 Has Exit Time
+
+步骤 4：Move → Attack1
+  - 右键 Move → Make Transition → 指向 Attack1
+  - Conditions: IsAttacking == true
+  - 取消勾选 Has Exit Time
+
+步骤 5：Idle → Attack2（攻击顺序：第二次按键直接进 Attack2）
+  - 右键 Idle → Make Transition → 指向 Attack2
+  - Conditions: IsAttacking == true, ComboStep == 2
+  - 取消勾选 Has Exit Time
+
+步骤 6：Move → Attack2
+  - 右键 Move → Make Transition → 指向 Attack2
+  - Conditions: IsAttacking == true, ComboStep == 2
+  - 取消勾选 Has Exit Time
+
+步骤 7：Attack1 → Idle
+  - 右键 Attack1 → Make Transition → 指向 Idle
+  - Conditions: IsAttacking == false
+  - 取消勾选 Has Exit Time
+
+步骤 8：Attack2 → Idle
+  - 右键 Attack2 → Make Transition → 指向 Idle
+  - Conditions: IsAttacking == false
+  - 取消勾选 Has Exit Time
+
+
+五、动画片段命名建议
+--------------------------------------------------------------------------------
+Attack1_Down, Attack1_Up, Attack1_Left, Attack1_Right
+Attack2_Down, Attack2_Up, Attack2_Left, Attack2_Right
+
+若使用 Blend Tree，将对应方向的动画拖入对应位置即可。
+
+
+六、PlayerController 的配套修改（已完成）
+--------------------------------------------------------------------------------
+- attackSequenceIndex：攻击顺序（1,2,3...），冲刺不重置
+- canAttack：冷却 + 恢复都结束时可攻击
+- SetAttackRecovery：攻击结束时由 AttackState.Exit 调用
+
+
+七、Inspector 中 attackSteps 配置
+--------------------------------------------------------------------------------
+在 Player 的 PlayerController 组件里：
+
+Attack Steps:
+  - Element 0: duration=0.35, recoveryTime=0.3, lungeDistance=0.3
+  - Element 1: duration=0.35, recoveryTime=0.3, lungeDistance=0.35
+  - 可添加 Element 2 作为第三段
+
+recoveryTime：本段攻击结束后，多久才能按下一次攻击。
+
+
+八、冲刺动画（PlayerDashState）
+--------------------------------------------------------------------------------
+1. 在 Animator Parameters 中添加：IsDashing (Bool)
+
+2. 创建 Dash 状态（单动画或 Blend Tree）：
+   - 单动画：Create State → 选择冲刺动画
+   - 四向 Blend Tree：Blend Type 2D Simple Directional，Parameters: MoveX, MoveY
+     Motion: Dash_Down(0,-1), Dash_Up(0,1), Dash_Left(-1,0), Dash_Right(1,0)
+
+3. 转换：
+   - Idle/Move/Attack1/Attack2 → Dash：Conditions: IsDashing == true
+   - Dash → Idle：Conditions: IsDashing == false

@@ -1,0 +1,134 @@
+================================================================================
+                        伤害系统使用说明（新手向）
+================================================================================
+
+一、系统概述
+--------------------------------------------------------------------------------
+本伤害系统采用「接口 + Health 组件」方式，所有可受伤对象统一使用 Health 组件。
+敌人、可破坏物、玩家都可以挂 Health，实现统一的伤害处理。
+
+核心文件：
+  - IDamageable.cs    可受伤接口
+  - DamageInfo.cs     伤害信息结构体
+  - Health.cs         生命值组件（实现 IDamageable）
+  - AttackHitbox.cs   玩家攻击碰撞检测
+
+
+二、伤害流程
+--------------------------------------------------------------------------------
+1. 玩家攻击 → PlayerAttackState 调用 attackHitbox.EnableHitbox(伤害值)
+2. AttackHitbox 的 Collider2D 启用，开始检测碰撞
+3. 碰撞到带 IDamageable 的对象 → 调用 TakeDamage(DamageInfo)
+4. Health 组件扣血，若 HP≤0 触发 OnDeath 事件
+5. 攻击结束 → DisableHitbox
+
+注意：同一对象在一次攻击中只会受到一次伤害（避免重复扣血）
+
+
+三、玩家设置（让攻击能打中敌人）
+--------------------------------------------------------------------------------
+步骤 1：创建攻击碰撞盒子物体
+  1. 选中 Player 对象
+  2. 右键 → Create Empty，命名为 "AttackHitbox"
+  3. 将 AttackHitbox 的 Position 设为 (0, 0, 0)（与玩家重叠即可）
+
+步骤 2：添加碰撞体
+  1. 选中 AttackHitbox 子物体
+  2. Add Component → Physics 2D → Circle Collider 2D
+  3. 勾选 Is Trigger
+  4. 调整 Radius（建议 0.3~0.5，Hitbox 会随攻击方向移动，无需过大）
+  5. 初始 Position 设为 (0,0)，代码会根据攻击方向自动偏移
+
+步骤 3：添加组件
+  1. 选中 AttackHitbox 子物体
+  2. Add Component → Attack Hitbox（脚本）
+  3. Owner 留空即可，代码会自动设为玩家
+
+步骤 4：绑定到玩家
+  1. 选中 Player 对象
+  2. 在 PlayerController 的「攻击碰撞」区域
+  3. 将 AttackHitbox 子物体拖入 Attack Hitbox 槽位
+
+步骤 5：配置攻击伤害与 Hitbox 位置
+  在 PlayerController 的 Attack Steps 中，每段可设置：
+  - attackDamage：伤害值
+  - hitboxOffset：Hitbox 相对玩家的偏移距离（朝攻击方向），每段可不同
+  - usePerDirectionOffsets：勾选后，上下左右(WASD)使用各自的 Hitbox 偏移
+  - hitboxOffsetUp/Down/Left/Right：分方向偏移（仅在 usePerDirectionOffsets 勾选时生效）
+  - Element 0 示例：attackDamage=1, hitboxOffset=0.4（近身）
+  - Element 1 示例：attackDamage=2, hitboxOffset=0.6（稍远）
+  - 四向不同范围示例：勾选 usePerDirectionOffsets，设置 Up=0.8, Down=0.4, Left=0.6, Right=0.6
+
+
+四、站桩敌人设置
+--------------------------------------------------------------------------------
+步骤 1：创建敌人
+  1. 创建空物体或 Sprite，命名为 "Enemy"
+  2. 添加 Sprite Renderer（可选，用于显示）
+  3. Add Component → Physics 2D → Circle Collider 2D 或 Box Collider 2D
+  4. 勾选 Is Trigger（可选，用于检测；不勾选则用碰撞检测）
+
+步骤 2：添加 Health 组件
+  1. Add Component → Health
+  2. Max HP：设置生命值（如 3）
+  3. Invincible Duration：受伤后无敌帧（如 0.2，避免连续扣血）
+
+步骤 3：添加 StaticEnemy 组件
+  1. Add Component → Static Enemy
+  2. Animator：若有死亡动画，拖入 Animator
+  3. Death Trigger Name：死亡动画的 Trigger 参数名（如 "Death"）
+
+步骤 4：层级设置
+  确保 Collider2D 和 Health 在同一 GameObject 或其父子关系内。
+  攻击碰撞时会用 GetComponent<IDamageable>() 和 GetComponentInParent<IDamageable>(). 
+
+
+五、可破坏物设置（如木箱）
+--------------------------------------------------------------------------------
+步骤 1：创建可破坏物
+  1. 创建物体，添加 Sprite Renderer、Collider2D
+
+步骤 2：添加 Health 组件
+  1. Add Component → Health
+  2. Max HP：设置生命值（如 1，一击即碎）
+
+步骤 3：添加 Destructible 组件
+  1. Add Component → Destructible
+  2. Destroy Effect Prefab：可选，死亡时生成的预制体（如碎片）
+  3. Destroy Sound：可选，死亡音效
+
+步骤 4：测试
+  攻击可破坏物，应会销毁并可选播放效果/音效
+
+
+六、玩家受伤（可选，后续添加）
+--------------------------------------------------------------------------------
+1. 给 Player 添加 Health 组件
+2. 在 PlayerController 的 Awake 中获取 Health 引用
+3. 在 PlayerDashState 的 Enter 中：ctx.Health.SetIgnoreDamage(true)
+4. 在 PlayerDashState 的 Exit 中：ctx.Health.SetIgnoreDamage(false)
+5. 冲刺时玩家无敌，其他时候可受伤
+
+
+七、常见问题
+--------------------------------------------------------------------------------
+Q：攻击打不中敌人？
+A：检查：1) AttackHitbox 的 Collider 是否勾选 Is Trigger
+  2) 敌人的 Collider 是否启用
+  3) 两者是否在同一 Layer 或可互相检测（Edit → Project Settings → Physics 2D → Layer Collision Matrix）
+
+Q：一次攻击扣了多次血？
+A：AttackHitbox 已做防重复处理，同一对象一次攻击只扣一次。若仍有问题，检查是否有多个 Collider 重叠。
+
+Q：玩家打到自己？
+A：AttackHitbox 的 Collider 应设在子物体，且不与玩家碰撞。或在 Layer 中设置玩家与攻击层不碰撞。
+
+Q：如何让敌人攻击玩家？
+A：敌人需要自己的「攻击逻辑」和「碰撞检测」，检测到玩家时调用 player.GetComponent<Health>().TakeDamage(info)。玩家需挂 Health 并处理 OnDeath。
+
+
+八、扩展建议
+--------------------------------------------------------------------------------
+- 击退：DamageInfo 已支持 knockbackDirection 和 knockbackForce，在 AttackHitbox.EnableHitbox 中传入。
+- 伤害类型：可在 DamageInfo 中加 damageType 枚举，Health 根据类型计算抗性。
+- 暴击：在 AttackHitbox 或 DamageInfo 中计算后传入。

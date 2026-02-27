@@ -7,8 +7,9 @@ public class PlayerIdleState : StateBase<PlayerController>
 {
     public override void Enter(PlayerController ctx)
     {
+        ctx.attackFinished = false;  // 从 Attack 回到 Idle 时重置
         ctx.rb.linearVelocity = Vector2.zero;
-        ctx.animator.SetBool("Is Moving",false);
+        ctx.animator.SetBool("Is Moving", false);
         ctx.animator.SetFloat("MoveX", ctx.LastMoveDiraction.x);
         ctx.animator.SetFloat("MoveY", ctx.LastMoveDiraction.y);
     }
