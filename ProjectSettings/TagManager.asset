@@ -41,11 +41,20 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: New Layer 1
+  - name: BackGround
+    uniqueID: 2315667725
+    locked: 0
+  - name: Ground
+    uniqueID: 2668522339
+    locked: 0
+  - name: world
+    uniqueID: 2093259521
+    locked: 0
+  - name: effect
     uniqueID: 135988641
     locked: 0
-  - name: New Layer 2
-    uniqueID: 2093259521
+  - name: UI
+    uniqueID: 91844713
     locked: 0
   m_RenderingLayers:
   - Default
