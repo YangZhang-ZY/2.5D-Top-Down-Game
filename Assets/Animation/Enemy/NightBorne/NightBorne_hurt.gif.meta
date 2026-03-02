@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8f1c6c44c12426d43874baf2accb3898
+guid: 10e4d4cc5b2d74240b636622d2236023
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1765351576224072635
-    second: Archery_0
+      213: 6652064725921415861
+    second: NightBorne_hurt_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 64
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -75,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Archery_0
+      name: NightBorne_hurt_0
       rect:
         serializedVersion: 2
-        x: 2
-        y: 15
-        width: 185
-        height: 181
+        x: 0
+        y: 0
+        width: 240
+        height: 240
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bb30384c7e9cf7810800000000000000
-      internalID: 1765351576224072635
+      spriteID: 5b2c373cf91e05c50800000000000000
+      internalID: 6652064725921415861
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Archery_0: 1765351576224072635
+      NightBorne_hurt_0: 6652064725921415861
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

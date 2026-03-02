@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: 8f1c6c44c12426d43874baf2accb3898
+guid: 3344e456cda7504428bba4f750cead5b
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1765351576224072635
-    second: Archery_0
+      213: -7299492287533089047
+    second: Desert-Houses-2-Sheet_0
+  - first:
+      213: -2263264567363676519
+    second: Desert-Houses-2-Sheet_1
+  - first:
+      213: -7023832050194699926
+    second: Desert-Houses-2-Sheet_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +43,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -51,7 +57,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 64
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -75,7 +81,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -126,13 +132,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Archery_0
+      name: Desert-Houses-2-Sheet_0
       rect:
         serializedVersion: 2
-        x: 2
-        y: 15
-        width: 185
-        height: 181
+        x: 1
+        y: 3
+        width: 43
+        height: 39
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +147,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bb30384c7e9cf7810800000000000000
-      internalID: 1765351576224072635
+      spriteID: 9eef2e8507ef2ba90800000000000000
+      internalID: -7299492287533089047
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Desert-Houses-2-Sheet_1
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 0
+        width: 43
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9965f850ed44790e0800000000000000
+      internalID: -2263264567363676519
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Desert-Houses-2-Sheet_2
+      rect:
+        serializedVersion: 2
+        x: 97
+        y: 0
+        width: 45
+        height: 46
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a692426d6f5568e90800000000000000
+      internalID: -7023832050194699926
       vertices: []
       indices: 
       edges: []
@@ -161,7 +211,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Archery_0: 1765351576224072635
+      Desert-Houses-2-Sheet_0: -7299492287533089047
+      Desert-Houses-2-Sheet_1: -2263264567363676519
+      Desert-Houses-2-Sheet_2: -7023832050194699926
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -1,10 +1,19 @@
 fileFormatVersion: 2
-guid: 8f1c6c44c12426d43874baf2accb3898
+guid: b431b64eb7416ae40a9ed9314cbfa537
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1765351576224072635
-    second: Archery_0
+      213: 6842999660662438955
+    second: gollux_hit_0
+  - first:
+      213: -851919428366089902
+    second: gollux_hit_1
+  - first:
+      213: 819154530856422853
+    second: gollux_hit_2
+  - first:
+      213: 7722796769736215483
+    second: gollux_hit_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +46,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -51,7 +60,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 64
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -75,7 +84,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -126,13 +135,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Archery_0
+      name: gollux_hit_0
       rect:
         serializedVersion: 2
-        x: 2
-        y: 15
-        width: 185
-        height: 181
+        x: 162
+        y: 0
+        width: 71
+        height: 64
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +150,74 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bb30384c7e9cf7810800000000000000
-      internalID: 1765351576224072635
+      spriteID: b2c37e38fe737fe50800000000000000
+      internalID: 6842999660662438955
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: gollux_hit_1
+      rect:
+        serializedVersion: 2
+        x: 546
+        y: 0
+        width: 70
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2514cf62bcf5d24f0800000000000000
+      internalID: -851919428366089902
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: gollux_hit_2
+      rect:
+        serializedVersion: 2
+        x: 930
+        y: 0
+        width: 65
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5cd49dba4b83e5b00800000000000000
+      internalID: 819154530856422853
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: gollux_hit_3
+      rect:
+        serializedVersion: 2
+        x: 1314
+        y: 0
+        width: 67
+        height: 61
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bbb49a4beb2ec2b60800000000000000
+      internalID: 7722796769736215483
       vertices: []
       indices: 
       edges: []
@@ -161,7 +236,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Archery_0: 1765351576224072635
+      gollux_hit_0: 6842999660662438955
+      gollux_hit_1: -851919428366089902
+      gollux_hit_2: 819154530856422853
+      gollux_hit_3: 7722796769736215483
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
