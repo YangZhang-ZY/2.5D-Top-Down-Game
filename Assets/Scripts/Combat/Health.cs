@@ -34,6 +34,9 @@ public class Health : MonoBehaviour, IDamageable
     [Tooltip("受到伤害时触发，参数为实际伤害值")]
     public UnityEvent<float> OnDamaged;
 
+    /// <summary>受到伤害时触发，参数为完整 DamageInfo（用于 EnemyBase 击退等）。仅代码订阅。</summary>
+    public event System.Action<DamageInfo> OnDamagedWithInfo;
+
     [Tooltip("死亡时触发")]
     public UnityEvent OnDeath;
 
@@ -72,6 +75,7 @@ public class Health : MonoBehaviour, IDamageable
         _invincibleTimer = invincibleDuration;
 
         OnDamaged?.Invoke(info.amount);
+        OnDamagedWithInfo?.Invoke(info);
 
         if (IsDead)
             OnDeath?.Invoke();
