@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c4e7739ffbacf74987db0763ffd9086, type: 3}
+  m_Name: sword
+  m_EditorClassIdentifier: Assembly-CSharp::ItemData
+  id: 111111111
+  displayName: zzzz
+  description: ddddddd
+  icon: {fileID: 860910309584662230, guid: 0e22f070b89c3c04ca594c29b1db16c5, type: 3}
+  itemType: 0
+  maxStack: 99
+  weight: 0.1
+  basePrice: 1

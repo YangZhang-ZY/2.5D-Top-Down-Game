@@ -242,7 +242,7 @@ public class WarriorController : EnemyBase
     {
         if (_stateMachine?.CurrentState != _chaseState) return;
         if (!IsPlayerInAttackRange()) return;
-        if (!CanAttackPublic() || !IsBlockCooldownReady()) return;
+        if (!CanAttackPublic()) return;
 
         if (Random.value < blockChance)
             wantToBlock = true;
