@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,7 +27,7 @@ public class InventoryUI : MonoBehaviour
     public Transform slotGridParent;
 
     [Tooltip("显示负重的 Text")]
-    public Text weightText;
+    public TextMeshProUGUI weightText;
 
     [Tooltip("整理按钮")]
     public Button sortButton;
@@ -77,7 +78,7 @@ public class InventoryUI : MonoBehaviour
 
         if (weightText != null && inventory != null)
         {
-            weightText.text = $"负重: {inventory.CurrentWeight:F1}/{inventory.maxWeight}";
+            weightText.text = $"Weight: {inventory.CurrentWeight:F1}/{inventory.maxWeight}";
             if (inventory.IsOverweight)
                 weightText.color = Color.red;
             else

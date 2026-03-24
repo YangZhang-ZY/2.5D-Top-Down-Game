@@ -6,12 +6,7 @@ using UnityEngine;
 /// </summary>
 public class Billboard : MonoBehaviour
 {
-    [Header("轴向")]
-    [Tooltip("勾选后只绕世界 Y 轴旋转（适合俯视，物体不倾斜）")]
-    public bool lockVertical = true;
-
     private Transform _cam;
-    private Vector3 _camForward;
 
     private void Start()
     {
@@ -26,15 +21,6 @@ public class Billboard : MonoBehaviour
             return;
         }
 
-        _camForward = _cam.forward;
-
-        if (lockVertical)
-        {
-            _camForward.y = 0f;
-            if (_camForward.sqrMagnitude < 0.01f) return;
-            _camForward.Normalize();
-        }
-
-        transform.forward = _camForward;
+        transform.forward = _cam.forward;
     }
 }

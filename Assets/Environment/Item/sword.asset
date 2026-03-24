@@ -17,6 +17,6 @@ MonoBehaviour:
   description: ddddddd
   icon: {fileID: 860910309584662230, guid: 0e22f070b89c3c04ca594c29b1db16c5, type: 3}
   itemType: 0
-  maxStack: 99
-  weight: 0.1
+  maxStack: 10
+  weight: 10
   basePrice: 1
