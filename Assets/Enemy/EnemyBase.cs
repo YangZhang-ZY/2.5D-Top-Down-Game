@@ -4,7 +4,8 @@ using UnityEngine;
 /// 敌人通用基类。
 ///
 /// 【功能】
-/// - 自动查找玩家并追击
+/// - 塔防目标：首要目标（如水晶）优先；玩家挑衅或被打后仇恨玩家；脱战后回到首要目标
+/// - 自动查找玩家（Tag Player）
 /// - 攻击冷却管理
 /// - 受击时：播放 Hit 动画、音效、闪白（可扩展）、击退
 /// - 死亡时：停止移动、播放死亡动画、关闭碰撞
@@ -28,11 +29,18 @@ public abstract class EnemyBase : MonoBehaviour
 {
     // ==================== 一、Inspector 可调参数 ====================
 
+    [Header("塔防目标（水晶等）")]
+    [Tooltip("首要目标（基地水晶 Transform）。未赋值时回退为仅在追击范围内追击玩家。")]
+    public Transform primaryTarget;
+
+    [Tooltip("玩家进入此距离内会优先追击玩家（挑衅）")]
+    public float playerProvokeRange = 2.5f;
+
     [Header("移动与感知")]
     [Tooltip("敌人移动速度")]
     public float moveSpeed = 2f;
 
-    [Tooltip("玩家进入此范围后开始追击（单位：世界距离）")]
+    [Tooltip("玩家进入此范围后开始追击（单位：世界距离）；仅针对玩家目标时有效")]
     public float chaseRange = 8f;
 
     [Tooltip("进入此范围后可以攻击（近战/远程子类可自定义逻辑）")]
@@ -94,6 +102,9 @@ public abstract class EnemyBase : MonoBehaviour
 
     /// <summary>是否有有效的 lastDamageInfo</summary>
     protected bool hasLastDamageInfo;
+
+    /// <summary>是否因玩家挑衅或被打而优先追击玩家（后续可扩展城墙等目标）</summary>
+    protected bool playerAggroActive;
 
 
     // ==================== 四、Unity 生命周期 ====================
@@ -211,6 +222,8 @@ public abstract class EnemyBase : MonoBehaviour
         if (isDead) return;
         lastDamageInfo = info;
         hasLastDamageInfo = true;
+        if (IsDamageFromPlayer(info))
+            playerAggroActive = true;
         ApplyKnockbackFromLastDamage();
     }
 
@@ -297,6 +310,76 @@ public abstract class EnemyBase : MonoBehaviour
         if (player == null) return;
         Vector2 dir = ((Vector2)player.position - (Vector2)transform.position).normalized;
         rb.linearVelocity = dir * moveSpeed;
+    }
+
+    /// <summary>当前 AI 移动目标：优先仇恨玩家，否则首要目标（水晶），否则追击范围内的玩家。</summary>
+    public Transform GetMoveTarget()
+    {
+        if (playerAggroActive && player != null)
+            return player;
+        if (primaryTarget != null)
+            return primaryTarget;
+        if (player != null)
+        {
+            float _;
+            if (IsPlayerInRange(chaseRange, out _))
+                return player;
+        }
+        return null;
+    }
+
+    /// <summary>朝当前移动目标移动（水晶 / 玩家）</summary>
+    protected void MoveTowardsCurrentTarget()
+    {
+        var t = GetMoveTarget();
+        if (t == null || rb == null) return;
+        Vector2 dir = ((Vector2)t.position - (Vector2)transform.position).normalized;
+        if (dir.sqrMagnitude < 0.01f) return;
+        rb.linearVelocity = dir * moveSpeed;
+    }
+
+    /// <summary>与当前移动目标的距离是否在攻击范围内</summary>
+    public bool IsCurrentTargetInAttackRange()
+    {
+        var t = GetMoveTarget();
+        if (t == null) return false;
+        float sqr = (t.position - transform.position).sqrMagnitude;
+        return sqr <= attackRange * attackRange;
+    }
+
+    /// <summary>
+    /// 用于 Stay→Chase 等：首要目标时始终为 true；玩家目标时在追击半径内。
+    /// </summary>
+    public bool IsCurrentTargetInChaseRange()
+    {
+        var t = GetMoveTarget();
+        if (t == null) return false;
+        if (primaryTarget != null && t == primaryTarget) return true;
+        return (t.position - transform.position).sqrMagnitude <= chaseRange * chaseRange;
+    }
+
+    /// <summary>每帧更新：挑衅距离、脱战（子类在 Update 中调用）</summary>
+    protected void UpdateAggroProvoke()
+    {
+        if (player == null) return;
+        float sqr = (player.position - transform.position).sqrMagnitude;
+        if (sqr <= playerProvokeRange * playerProvokeRange)
+            playerAggroActive = true;
+        else if (playerAggroActive && sqr > chaseRange * chaseRange)
+            playerAggroActive = false;
+    }
+
+    static bool IsDamageFromPlayer(DamageInfo info)
+    {
+        if (info.source == null) return false;
+        if (info.source.CompareTag("Player")) return true;
+        var t = info.source.transform;
+        while (t != null)
+        {
+            if (t.CompareTag("Player")) return true;
+            t = t.parent;
+        }
+        return false;
     }
 
     /// <summary>停止移动</summary>

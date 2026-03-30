@@ -17,9 +17,10 @@ public class WarriorAttack1State : StateBase<WarriorController>
 
         ctx.SetAttack1(true);
         ctx.SetAttack2(false);
-        if (ctx.Player != null)
+        var tgt = ctx.GetMoveTarget();
+        if (tgt != null)
         {
-            Vector2 dir = ((Vector2)ctx.Player.position - (Vector2)ctx.transform.position).normalized;
+            Vector2 dir = ((Vector2)tgt.position - (Vector2)ctx.transform.position).normalized;
             if (dir.sqrMagnitude > 0.01f)
                 ctx.UpdateFacing(dir);
         }

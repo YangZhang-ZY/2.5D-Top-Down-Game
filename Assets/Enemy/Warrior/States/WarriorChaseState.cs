@@ -23,6 +23,6 @@ public class WarriorChaseState : StateBase<WarriorController>
     /// </summary>
     public override void Update(WarriorController ctx, float dt)
     {
-        ctx.MoveTowardsPlayerPublic();
+        ctx.MoveTowardsCurrentTargetPublic();
     }
 }

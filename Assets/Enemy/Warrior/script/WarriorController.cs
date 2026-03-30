@@ -7,8 +7,8 @@ using StateMachine;
 /// 继承 EnemyBase，复用移动、受击、击退、死亡等通用逻辑。
 ///
 /// 【状态机流程】
-/// Patrol → Chase（玩家进入追击范围）
-/// Chase → Patrol（玩家离开追击范围）
+/// Patrol → Chase（有移动目标且未进近战：水晶或玩家）
+/// Chase → Patrol（失去移动目标）
 /// Chase → Attack1（玩家在攻击范围内，WarriorController 决策随机攻击）
 /// Chase → Block（玩家在攻击范围内，WarriorController 决策随机格挡）
 /// Attack1 → Attack2（第一段结束，由动画事件 OnAttack1End 触发）
@@ -178,12 +178,12 @@ public class WarriorController : EnemyBase
         // 全局转换：任意状态 → Death（HP 归零时）
         _stateMachine.AddGlobalTransition(_deathState, ctx => ctx.isDead);
 
-        // Patrol → Chase：玩家在追击范围内且不在攻击范围内
+        // Patrol → Chase：有移动目标且尚未进入近战
         _stateMachine.AddTransition(_patrolState, _chaseState, ctx =>
-            ctx.IsPlayerInChaseRange() && !ctx.IsPlayerInAttackRange());
+            ctx.GetMoveTarget() != null && !ctx.IsCurrentTargetInAttackRange());
 
-        // Chase → Patrol：玩家离开追击范围
-        _stateMachine.AddTransition(_chaseState, _patrolState, ctx => !ctx.IsPlayerInChaseRange());
+        // Chase → Patrol：失去移动目标（无水晶且无玩家仇恨等）
+        _stateMachine.AddTransition(_chaseState, _patrolState, ctx => ctx.GetMoveTarget() == null);
 
         // Chase → Attack1：wantToAttack 且攻击冷却已好
         _stateMachine.AddTransition(_chaseState, _attack1State, ctx => ctx.wantToAttack && ctx.CanAttackPublic());
@@ -200,13 +200,13 @@ public class WarriorController : EnemyBase
         // Block → Stay：格挡结束
         _stateMachine.AddTransition(_blockState, _stayState, ctx => ctx.blockFinished);
 
-        // Stay → Patrol：停留结束且玩家不在追击范围
+        // Stay → Patrol：停留结束且无目标可追
         _stateMachine.AddTransition(_stayState, _patrolState, ctx =>
-            ctx.stayFinished && !ctx.IsPlayerInChaseRange());
+            ctx.stayFinished && ctx.GetMoveTarget() == null);
 
-        // Stay → Chase：停留结束且玩家在追击范围
+        // Stay → Chase：停留结束且仍可追击
         _stateMachine.AddTransition(_stayState, _chaseState, ctx =>
-            ctx.stayFinished && ctx.IsPlayerInChaseRange());
+            ctx.stayFinished && ctx.IsCurrentTargetInChaseRange());
     }
 
     protected override void Update()
@@ -221,7 +221,9 @@ public class WarriorController : EnemyBase
         if (_blockCooldownTimer > 0f)
             _blockCooldownTimer -= Time.deltaTime;
 
-        // AI 决策：在 Chase 时若玩家进入攻击范围且冷却好，随机选择攻击或格挡
+        UpdateAggroProvoke();
+
+        // AI 决策：仅对玩家目标随机攻击/格挡（对水晶不打格挡）
         TickAIDecision();
 
         // 运行状态机：检查转换条件，执行当前状态的 Update
@@ -241,13 +243,23 @@ public class WarriorController : EnemyBase
     private void TickAIDecision()
     {
         if (_stateMachine?.CurrentState != _chaseState) return;
-        if (!IsPlayerInAttackRange()) return;
+        if (!IsCurrentTargetInAttackRange()) return;
         if (!CanAttackPublic()) return;
 
-        if (Random.value < blockChance)
-            wantToBlock = true;
+        var tgt = GetMoveTarget();
+        if (tgt == null) return;
+
+        if (player != null && tgt == player)
+        {
+            if (Random.value < blockChance)
+                wantToBlock = true;
+            else
+                wantToAttack = true;
+        }
         else
+        {
             wantToAttack = true;
+        }
     }
 
     protected override void UpdateAI()
@@ -268,6 +280,9 @@ public class WarriorController : EnemyBase
 
     /// <summary>供状态类调用：朝玩家移动</summary>
     public void MoveTowardsPlayerPublic() => MoveTowardsPlayer();
+
+    /// <summary>供状态类调用：朝当前目标（水晶/玩家）移动</summary>
+    public void MoveTowardsCurrentTargetPublic() => MoveTowardsCurrentTarget();
 
     /// <summary>供状态类调用：朝指定点移动</summary>
     public void MoveTowardsPointPublic(Vector2 target)
@@ -291,14 +306,14 @@ public class WarriorController : EnemyBase
     /// <summary>供状态类调用：重置攻击冷却</summary>
     public void ResetAttackCooldownPublic() => ResetAttackCooldown();
 
-    /// <summary>玩家是否在追击范围内</summary>
+    /// <summary>玩家是否在追击范围内（调试用）</summary>
     public bool IsPlayerInChaseRange()
     {
         float _;
         return IsPlayerInRange(chaseRange, out _);
     }
 
-    /// <summary>玩家是否在攻击范围内</summary>
+    /// <summary>玩家是否在攻击范围内（调试用）</summary>
     public bool IsPlayerInAttackRange()
     {
         float _;
@@ -374,10 +389,11 @@ public class WarriorController : EnemyBase
     /// <param name="index">1=第一段，2=第二段；0 则使用 _currentAttackIndex</param>
     public void EnableAttackHitbox(int index = 0)
     {
-        if (attackHitbox == null || player == null) return;
+        var tgt = GetMoveTarget();
+        if (attackHitbox == null || tgt == null) return;
         if (index <= 0) index = _currentAttackIndex;
 
-        Vector2 dir = ((Vector2)player.position - (Vector2)transform.position).normalized;
+        Vector2 dir = ((Vector2)tgt.position - (Vector2)transform.position).normalized;
         if (dir.sqrMagnitude < 0.01f) dir = Vector2.down;
 
         float damage = index == 1 ? attackDamage1 : attackDamage2;
@@ -411,8 +427,9 @@ public class WarriorController : EnemyBase
     /// </summary>
     public void OnAttackHit(int index)
     {
-        if (Player == null) return;
-        Vector2 dir = ((Vector2)Player.position - (Vector2)transform.position).normalized;
+        var tgt = GetMoveTarget();
+        if (tgt == null) return;
+        Vector2 dir = ((Vector2)tgt.position - (Vector2)transform.position).normalized;
         if (dir.sqrMagnitude < 0.01f) dir = Vector2.down;
         UpdateFacing(dir);
 

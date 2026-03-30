@@ -21,9 +21,10 @@ public class WarriorBlockState : StateBase<WarriorController>
         ctx.StopMovingPublic();
         ctx.SetBlocking(true);
         _blockTimer = ctx.blockDuration;
-        if (ctx.Player != null)
+        var tgt = ctx.GetMoveTarget();
+        if (tgt != null)
         {
-            Vector2 dir = ((Vector2)ctx.Player.position - (Vector2)ctx.transform.position).normalized;
+            Vector2 dir = ((Vector2)tgt.position - (Vector2)ctx.transform.position).normalized;
             ctx.UpdateFacing(dir);
         }
     }
