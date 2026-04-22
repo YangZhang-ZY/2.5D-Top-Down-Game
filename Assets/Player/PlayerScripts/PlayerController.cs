@@ -181,7 +181,7 @@ public class PlayerController : MonoBehaviour
         if (_dashCooldownTimer > 0f)
             _dashCooldownTimer -= Time.deltaTime;
 
-        if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.F1))
+        if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
             string stateName = stateMachine.CurrentState?.GetType().Name ?? "null";
             Debug.Log($"[StateMachine] 当前状态: {stateName}");

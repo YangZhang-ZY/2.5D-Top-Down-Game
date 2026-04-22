@@ -4,35 +4,40 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 背包主面板 UI。管理格子显示、负重、整理按钮。
-/// 挂在 InventoryPanel 上。
+/// Main inventory panel: slot widgets, weight text, sort button.
+/// Place on the inventory panel root.
 ///
-/// 绑定步骤：
-/// 1. Inventory：拖入有 Inventory 组件的物体（如 Player）
-/// 2. Slot UIPrefab：拖入 InventorySlotUI Prefab
-/// 3. Slot Grid Parent：拖入 SlotGrid 物体
-/// 4. Weight Text：拖入显示负重的 Text
-/// 5. Sort Button：拖入整理按钮
+/// Wire-up:
+/// 1. Inventory — object with Inventory (e.g. Player)
+/// 2. Slot UI prefab — InventorySlotUI prefab
+/// 3. Slot grid parent — RectTransform with Grid Layout Group
+/// 4. Weight text — TMP for current/max weight
+/// 5. Sort button — optional
 /// </summary>
 public class InventoryUI : MonoBehaviour
 {
-    [Header("引用（拖拽绑定）")]
-    [Tooltip("背包逻辑，通常挂在 Player 上")]
+    [Header("References")]
+    [Tooltip("Runtime inventory, usually on the player.")]
     public Inventory inventory;
 
-    [Tooltip("格子 Prefab（InventorySlotUI）")]
+    [Tooltip("Prefab for one slot (InventorySlotUI on root).")]
     public GameObject slotUIPrefab;
 
-    [Tooltip("格子的父物体（SlotGrid，需要有 Grid Layout Group）")]
+    [Tooltip("Parent for slot instances (e.g. SlotGrid with Grid Layout Group).")]
     public Transform slotGridParent;
 
-    [Tooltip("显示负重的 Text")]
+    [Tooltip("Displays current / max weight.")]
     public TextMeshProUGUI weightText;
 
-    [Tooltip("整理按钮")]
+    [Tooltip("Invokes Inventory.Sort.")]
     public Button sortButton;
 
     private List<InventorySlotUI> _slotUIs = new List<InventorySlotUI>();
+
+    private int _selectedSlotIndex = -1;
+
+    /// <summary>Currently selected slot, or -1 if none.</summary>
+    public int SelectedSlotIndex => _selectedSlotIndex;
 
     private void Start()
     {
@@ -65,7 +70,7 @@ public class InventoryUI : MonoBehaviour
             var slotUI = go.GetComponent<InventorySlotUI>();
             if (slotUI != null)
             {
-                slotUI.Bind(inventory, i);
+                slotUI.Bind(inventory, i, this);
                 _slotUIs.Add(slotUI);
             }
         }
@@ -73,8 +78,18 @@ public class InventoryUI : MonoBehaviour
 
     private void RefreshAll()
     {
+        if (inventory != null)
+        {
+            if (_selectedSlotIndex >= inventory.Slots.Count)
+                _selectedSlotIndex = -1;
+            else if (_selectedSlotIndex >= 0 && inventory.Slots[_selectedSlotIndex].IsEmpty)
+                _selectedSlotIndex = -1;
+        }
+
         foreach (var slotUI in _slotUIs)
             slotUI.Refresh();
+
+        ApplySelectionVisuals();
 
         if (weightText != null && inventory != null)
         {
@@ -91,20 +106,41 @@ public class InventoryUI : MonoBehaviour
         inventory?.Sort();
     }
 
-    /// <summary>打开背包</summary>
+    /// <summary>Selects a slot for sell / context actions. Invalid index is ignored.</summary>
+    public void SelectSlot(int index)
+    {
+        if (inventory == null) return;
+        if (index < 0 || index >= inventory.Slots.Count) return;
+        _selectedSlotIndex = index;
+        ApplySelectionVisuals();
+    }
+
+    public void ClearSelection()
+    {
+        _selectedSlotIndex = -1;
+        ApplySelectionVisuals();
+    }
+
+    void ApplySelectionVisuals()
+    {
+        for (int i = 0; i < _slotUIs.Count; i++)
+            _slotUIs[i].SetSelected(i == _selectedSlotIndex);
+    }
+
+    /// <summary>Shows the panel.</summary>
     public void Open()
     {
         gameObject.SetActive(true);
         RefreshAll();
     }
 
-    /// <summary>关闭背包</summary>
+    /// <summary>Hides the panel.</summary>
     public void Close()
     {
         gameObject.SetActive(false);
     }
 
-    /// <summary>切换打开/关闭</summary>
+    /// <summary>Toggles visibility.</summary>
     public void Toggle()
     {
         if (gameObject.activeSelf)

@@ -1,17 +1,16 @@
 using UnityEngine;
 
 /// <summary>
-/// 可破坏物：如木箱、罐子。受到伤害后销毁。
-/// 挂到可破坏物上，需配合 Health 组件和 Collider2D。
+/// Destroys the GameObject when <see cref="Health"/> dies (crates, jars, etc.).
 /// </summary>
 [RequireComponent(typeof(Health))]
 public class Destructible : MonoBehaviour
 {
-    [Header("死亡效果")]
-    [Tooltip("可选：死亡时生成的预制体（如碎片）")]
+    [Header("On destroy")]
+    [Tooltip("Optional VFX prefab.")]
     public GameObject destroyEffectPrefab;
 
-    [Tooltip("可选：死亡时播放的音效")]
+    [Tooltip("Optional one-shot sound.")]
     public AudioClip destroySound;
 
     private Health _health;

@@ -1,26 +1,22 @@
 using UnityEngine;
 
 /// <summary>
-/// 背包单个槽位。存储物品引用和数量。
-/// 供 Inventory 使用，支持堆叠判断。
+/// One inventory stack: item reference and count.
 /// </summary>
 [System.Serializable]
 public class InventorySlot
 {
-    [Tooltip("物品数据引用，空槽位为 null")]
+    [Tooltip("Item template; null when empty.")]
     public ItemData item;
 
-    [Tooltip("当前数量")]
+    [Tooltip("Stack count.")]
     [Min(0)]
     public int count;
 
-    /// <summary>槽位是否为空</summary>
+    /// <summary>True when there is no valid stack.</summary>
     public bool IsEmpty => item == null || count <= 0;
 
-    /// <summary>
-    /// 能否向此槽位添加更多指定物品。
-    /// 空槽位可接受任何物品；非空槽位仅当物品相同且未满时可添加。
-    /// </summary>
+    /// <summary>Whether more of itemToAdd can merge into this slot.</summary>
     public bool CanAddMore(ItemData itemToAdd)
     {
         if (itemToAdd == null || !itemToAdd.IsValid) return false;
@@ -29,10 +25,7 @@ public class InventorySlot
         return count < item.maxStack;
     }
 
-    /// <summary>
-    /// 此槽位还能堆叠多少指定物品。
-    /// 空槽位返回该物品的 maxStack；不同物品返回 0。
-    /// </summary>
+    /// <summary>How many more of itemToAdd fit here; empty slot returns maxStack for that item.</summary>
     public int RemainingStackSpace(ItemData itemToAdd)
     {
         if (itemToAdd == null || !itemToAdd.IsValid) return 0;
@@ -41,21 +34,21 @@ public class InventorySlot
         return Mathf.Max(0, item.maxStack - count);
     }
 
-    /// <summary>获取此槽位总重量</summary>
+    /// <summary>Total weight of this stack.</summary>
     public float GetTotalWeight()
     {
         if (IsEmpty) return 0f;
         return item.weight * count;
     }
 
-    /// <summary>清空槽位</summary>
+    /// <summary>Clears the slot.</summary>
     public void Clear()
     {
         item = null;
         count = 0;
     }
 
-    /// <summary>设置槽位内容（用于初始化或交换）</summary>
+    /// <summary>Sets stack contents (used when sorting / swapping).</summary>
     public void Set(ItemData newItem, int newCount)
     {
         item = newItem;

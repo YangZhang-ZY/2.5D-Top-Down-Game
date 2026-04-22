@@ -2,27 +2,26 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 血条 UI。绑定 Health 组件，自动更新血条显示。
-/// 支持白色伤害延迟条：受伤后白色部分会滑动缩小，不会直接变短。
+/// UI bar driven by <see cref="Health"/>. Optional delayed white "damage" segment shrinks after hits.
 ///
-/// 使用步骤：
-/// 1. 创建 Canvas（敌人用 World Space，玩家用 Screen Space）
-/// 2. 层级（从下到上）：Background → DamageFill（白）→ Fill（红/绿）
-/// 3. Fill 和 DamageFill 的 Image Type=Filled，Fill Method=Horizontal，Fill Origin=Left
-/// 4. 挂载本脚本，拖入 health、fillImage，可选 damageFillImage
+/// Setup:
+/// 1. Canvas (world or screen space as needed).
+/// 2. Layer order bottom to top: background, optional white damage fill, coloured HP fill.
+/// 3. Filled images: Horizontal fill from Left.
+/// 4. Assign health, fillImage, optional damageFillImage.
 /// </summary>
 public class HealthBar : MonoBehaviour
 {
-    [Header("绑定")]
-    [Tooltip("要显示血条的对象，留空则从父物体获取")]
+    [Header("Bindings")]
+    [Tooltip("Health to display; defaults to parent if empty.")]
     public Health health;
-    [Tooltip("血条填充图（Image，Type=Filled，Fill Method=Horizontal，Fill Origin=Left）")]
+    [Tooltip("Main HP fill (Image, Type Filled, Horizontal, Left).")]
     public Image fillImage;
-    [Tooltip("白色伤害延迟条，受伤后从此值滑动缩小。留空则无此效果")]
+    [Tooltip("Optional delayed damage strip; leave empty to disable.")]
     public Image damageFillImage;
 
-    [Header("伤害动画")]
-    [Tooltip("白色条缩小速度（fillAmount/秒）")]
+    [Header("Damage strip")]
+    [Tooltip("How fast the white strip catches up (fillAmount per second).")]
     public float damageShrinkSpeed = 2f;
 
     private float _damageFillAmount;
@@ -85,7 +84,7 @@ public class HealthBar : MonoBehaviour
 
     private void OnHealthDeath() => gameObject.SetActive(false);
 
-    /// <summary>根据当前 HP 刷新血条显示</summary>
+    /// <summary>Updates fills from current HP.</summary>
     public void Refresh()
     {
         if (health == null || fillImage == null) return;

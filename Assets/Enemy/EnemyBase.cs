@@ -30,8 +30,11 @@ public abstract class EnemyBase : MonoBehaviour
     // ==================== 一、Inspector 可调参数 ====================
 
     [Header("塔防目标（水晶等）")]
-    [Tooltip("首要目标（基地水晶 Transform）。未赋值时回退为仅在追击范围内追击玩家。")]
+    [Tooltip("首要目标（基地水晶 Transform）。未赋值时可在 Start 中通过 BaseTarget 或 Tag 自动查找。")]
     public Transform primaryTarget;
+
+    [Tooltip("Primary Target 为空时，按此 Tag 查找（需在 Tag Manager 中创建）。若场景有 BaseTarget 组件则优先用其单例。")]
+    public string autoFindBaseTag = "Base";
 
     [Tooltip("玩家进入此距离内会优先追击玩家（挑衅）")]
     public float playerProvokeRange = 2.5f;
@@ -123,6 +126,42 @@ public abstract class EnemyBase : MonoBehaviour
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
             player = playerObj.transform;
+    }
+
+    /// <summary>
+    /// 子类若实现 Start，请先调用 base.Start()，以便自动解析 Primary Target。
+    /// </summary>
+    protected virtual void Start()
+    {
+        ResolvePrimaryTarget();
+    }
+
+    /// <summary>
+    /// 未手动指定 Primary Target 时：优先 <see cref="BaseTarget"/>，否则按 Tag 查找。
+    /// </summary>
+    protected void ResolvePrimaryTarget()
+    {
+        if (primaryTarget != null) return;
+
+        if (BaseTarget.Instance != null)
+        {
+            primaryTarget = BaseTarget.Instance;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(autoFindBaseTag))
+            return;
+
+        try
+        {
+            GameObject go = GameObject.FindGameObjectWithTag(autoFindBaseTag);
+            if (go != null)
+                primaryTarget = go.transform;
+        }
+        catch (UnityException)
+        {
+            // Tag 未在项目中定义时忽略
+        }
     }
 
     /// <summary>

@@ -4,11 +4,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// 使用 Handles + DrawGizmo，避免被地形遮挡且未选中时也可显示（按 ResourceSpawner 开关）。
+/// Draws ResourceSpawner rings with Handles so they are visible above terrain when configured.
 /// </summary>
 public static class ResourceSpawnerGizmoDrawer
 {
-    /// <summary>2D 游戏：圆在 XY 平面（法线 Z+）。若你的地面在 XZ，把此处改为 Vector3.up 并在脚本里加切换。</summary>
+    /// <summary>2D gameplay on XY plane; disc normal is +Z. For XZ ground, switch to Vector3.up in both code paths.</summary>
     private static readonly Vector3 DiscNormal = Vector3.forward;
 
     [DrawGizmo(GizmoType.Selected | GizmoType.Active | GizmoType.NonSelected)]

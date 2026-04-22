@@ -1,33 +1,88 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 /// <summary>
-/// 背包单个格子的 UI。显示物品图标和数量。
-/// 挂在 InventorySlotUI Prefab 的根物体上。
+/// Single inventory slot UI: icon and stack count.
+/// Root of the slot prefab.
+/// Selection: assign <see cref="slotButton"/> (recommended) or leave null — a raycast graphic is ensured for clicks.
 /// </summary>
-public class InventorySlotUI : MonoBehaviour
+public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
 {
-    [Header("引用（拖拽绑定）")]
-    [Tooltip("显示物品图标的 Image")]
+    [Header("References")]
+    [Tooltip("Icon image for the item.")]
     public Image iconImage;
 
-    [Tooltip("显示数量的 Text")]
+    [Tooltip("Stack count text.")]
     public TextMeshProUGUI countText;
+
+    [Header("Selection")]
+    [Tooltip("Optional: border / frame shown when this slot is selected.")]
+    public GameObject selectionHighlight;
+
+    [Tooltip("Optional: Button on this slot; wires select on click. If null, uses IPointerClickHandler on this GameObject.")]
+    public Button slotButton;
 
     private Inventory _inventory;
     private int _slotIndex;
+    private InventoryUI _inventoryUI;
     private bool _loggedMissingUIRefs;
 
-    /// <summary>绑定到指定背包的指定槽位</summary>
-    public void Bind(Inventory inventory, int slotIndex)
+    /// <summary>Binds to a slot index on the given inventory.</summary>
+    public void Bind(Inventory inventory, int slotIndex, InventoryUI owner = null)
     {
         _inventory = inventory;
         _slotIndex = slotIndex;
+        _inventoryUI = owner != null ? owner : GetComponentInParent<InventoryUI>();
+
+        if (slotButton == null)
+            slotButton = GetComponent<Button>();
+
+        if (slotButton != null)
+        {
+            slotButton.onClick.RemoveAllListeners();
+            slotButton.onClick.AddListener(OnSlotClicked);
+        }
+        else
+            EnsureRaycastGraphic();
+
         Refresh();
     }
 
-    /// <summary>刷新显示（背包变化时调用）</summary>
+    void OnSlotClicked()
+    {
+        if (_inventoryUI != null)
+            _inventoryUI.SelectSlot(_slotIndex);
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (slotButton != null) return;
+        OnSlotClicked();
+    }
+
+    void EnsureRaycastGraphic()
+    {
+        var graphic = GetComponent<Graphic>();
+        if (graphic == null)
+        {
+            var img = gameObject.AddComponent<Image>();
+            img.color = new Color(1f, 1f, 1f, 0.001f);
+            img.raycastTarget = true;
+        }
+        else
+            graphic.raycastTarget = true;
+    }
+
+    /// <summary>Called by <see cref="InventoryUI"/> when selection changes.</summary>
+    public void SetSelected(bool selected)
+    {
+        if (selectionHighlight != null)
+            selectionHighlight.SetActive(selected);
+    }
+
+    /// <summary>Refreshes visuals when inventory changes.</summary>
     public void Refresh()
     {
         if (_inventory == null || _slotIndex < 0 || _slotIndex >= _inventory.Slots.Count)
@@ -47,8 +102,9 @@ public class InventorySlotUI : MonoBehaviour
         {
             _loggedMissingUIRefs = true;
             Debug.LogWarning(
-                $"[InventorySlotUI] 槽位索引={_slotIndex} 有物品「{slot.item.displayName}」但 UI 未绑定: " +
-                $"iconImage={(iconImage != null)} countText={(countText != null)}。请在 Prefab 上拖好引用。");
+                $"[InventorySlotUI] Slot {_slotIndex} has item '{slot.item.displayName}' but UI refs are missing: " +
+                $"iconImage={(iconImage != null)} countText={(countText != null)}. Assign them on the prefab.",
+                this);
         }
 
         if (iconImage != null)
@@ -65,7 +121,7 @@ public class InventorySlotUI : MonoBehaviour
         }
     }
 
-    /// <summary>清空显示</summary>
+    /// <summary>Clears visuals.</summary>
     public void Clear()
     {
         if (iconImage != null)

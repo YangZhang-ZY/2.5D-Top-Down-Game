@@ -2,24 +2,22 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// 攻击碰撞盒。挂在玩家子物体上，该子物体需有 Collider2D（isTrigger）。
-/// 攻击时启用，碰撞到 IDamageable 时造成伤害。
-/// 每次攻击只对同一对象造成一次伤害（避免重复扣血）。
+/// Melee hit volume on a child of the attacker. Needs a trigger Collider2D.
+/// Each target is damaged at most once per activation.
 ///
-/// 使用步骤：
-/// 1. 在 Player 下创建子物体，命名为 AttackHitbox
-/// 2. 给子物体添加 Circle Collider 2D，勾选 Is Trigger，调整 Radius
-/// 3. 给子物体添加本脚本
-/// 4. 在 PlayerController 的 attackHitbox 槽位拖入该子物体
+/// Setup:
+/// 1. Child under the player named AttackHitbox (or similar).
+/// 2. CircleCollider2D or similar, Is Trigger, sized for the attack arc.
+/// 3. This component on the same GameObject.
+/// 4. Reference from the player controller as the active hitbox.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class AttackHitbox : MonoBehaviour
 {
-    [Header("引用")]
-    [Tooltip("伤害来源（通常是玩家），用于 DamageInfo.source")]
+    [Header("References")]
+    [Tooltip("Damage source for DamageInfo.source (usually the player).")]
     public GameObject owner;
 
-    /// <summary>本帧/本次攻击已命中的对象，避免重复伤害</summary>
     private readonly HashSet<GameObject> _hitThisAttack = new HashSet<GameObject>();
 
     private Collider2D _collider;
@@ -31,13 +29,11 @@ public class AttackHitbox : MonoBehaviour
         _collider.enabled = false;
     }
 
-    /// <summary>
-    /// 开启攻击碰撞盒，开始检测伤害。
-    /// </summary>
-    /// <param name="damage">本次攻击伤害值</param>
-    /// <param name="direction">攻击方向（用于 Hitbox 位置和击退）</param>
-    /// <param name="offset">Hitbox 相对玩家的偏移距离，每段攻击可不同</param>
-    /// <param name="knockbackForce">击退力度，0 表示无</param>
+    /// <summary>Enables the collider and stores damage parameters for this swing.</summary>
+    /// <param name="damage">Damage amount.</param>
+    /// <param name="direction">Facing for placement / knockback.</param>
+    /// <param name="offset">Local offset along direction from the owner.</param>
+    /// <param name="knockbackForce">0 for none.</param>
     public void EnableHitbox(float damage, Vector2 direction, float offset, float knockbackForce = 0f)
     {
         _hitThisAttack.Clear();
@@ -50,9 +46,7 @@ public class AttackHitbox : MonoBehaviour
         _collider.enabled = true;
     }
 
-    /// <summary>
-    /// 关闭攻击碰撞盒
-    /// </summary>
+    /// <summary>Disables the collider until the next EnableHitbox.</summary>
     public void DisableHitbox()
     {
         _collider.enabled = false;

@@ -3,101 +3,90 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// 昼夜循环管理器。
-/// 流程：白天 → 黄昏（警告阶段） → 夜晚 → 白天 → …
-/// 
-/// 使用步骤：
-/// 1. 挂到场景中的 GameManager 空物体上
-/// 2. 将场景中的 Global Light 2D 拖到 globalLight 槽位
-/// 3. 在 Inspector 中配置各阶段时长、颜色和亮度
-/// 4. 其他脚本通过 DayNightManager.Instance.OnXxxStart 事件订阅
+/// Day/night cycle: day → dusk → night → day.
+///
+/// Setup:
+/// 1. Add to a manager GameObject.
+/// 2. Assign the scene Global Light 2D.
+/// 3. Tune durations, colours, and intensities in the Inspector.
+/// 4. Other systems subscribe via DayNightManager.Instance events.
 /// </summary>
 public class DayNightManager : MonoBehaviour
 {
     public static DayNightManager Instance { get; private set; }
 
-    // ==================== 阶段枚举 ====================
-
     public enum GamePhase { Day, Dusk, Night }
 
-    // ==================== Inspector 设置 ====================
-
-    [Header("光照引用")]
-    [Tooltip("场景中的 Global Light 2D")]
+    [Header("Lighting")]
+    [Tooltip("Scene Global Light 2D.")]
     public Light2D globalLight;
 
-    [Header("白天设置")]
-    [Tooltip("白天持续时间（秒）")]
+    [Header("Day")]
+    [Tooltip("Day length in seconds.")]
     public float dayDuration = 60f;
-    [Tooltip("白天光照强度")]
+    [Tooltip("Day light intensity.")]
     public float dayIntensity = 1f;
-    [Tooltip("白天光照颜色")]
+    [Tooltip("Day light colour.")]
     public Color dayColor = Color.white;
 
-    [Header("黄昏设置")]
-    [Tooltip("黄昏持续时间（秒），起警示作用")]
+    [Header("Dusk")]
+    [Tooltip("Dusk length in seconds (warning phase).")]
     public float duskDuration = 30f;
-    [Tooltip("黄昏光照强度")]
+    [Tooltip("Dusk light intensity.")]
     public float duskIntensity = 0.75f;
-    [Tooltip("黄昏光照颜色（橙红夕阳色）")]
+    [Tooltip("Dusk light colour (e.g. sunset orange).")]
     public Color duskColor = new Color(1f, 0.45f, 0.1f);
 
-    [Header("夜晚设置")]
-    [Tooltip("夜晚持续时间（秒）")]
+    [Header("Night")]
+    [Tooltip("Night length in seconds.")]
     public float nightDuration = 60f;
-    [Tooltip("夜晚光照强度")]
+    [Tooltip("Night light intensity.")]
     public float nightIntensity = 0.25f;
-    [Tooltip("夜晚光照颜色")]
+    [Tooltip("Night light colour.")]
     public Color nightColor = new Color(0.2f, 0.2f, 0.5f);
 
-    [Header("血月设置")]
-    [Tooltip("每隔多少天触发一次血月（默认 7）")]
+    [Header("Blood moon")]
+    [Tooltip("Blood moon every N days (default 7).")]
     public int bloodMoonInterval = 7;
-    [Tooltip("血月光照颜色")]
+    [Tooltip("Blood moon light colour.")]
     public Color bloodMoonColor = new Color(0.6f, 0.05f, 0.05f);
 
-    [Header("过渡设置")]
-    [Tooltip("阶段切换时光照过渡时长（秒）")]
+    [Header("Transitions")]
+    [Tooltip("Seconds to lerp light when a phase starts.")]
     public float transitionDuration = 3f;
 
-    // ==================== 事件 ====================
-
-    /// <summary>白天开始（资源刷新等可订阅）</summary>
+    /// <summary>Invoked at day start (resource refill, etc.).</summary>
     public event Action OnDayStart;
 
-    /// <summary>黄昏开始（警告 UI、音效等可订阅）</summary>
+    /// <summary>Invoked at dusk (warning UI, SFX).</summary>
     public event Action OnDuskStart;
 
-    /// <summary>夜晚开始（刷怪器可订阅）</summary>
+    /// <summary>Invoked at normal night start (enemy waves).</summary>
     public event Action OnNightStart;
 
-    /// <summary>血月开始（特殊刷怪逻辑可订阅）</summary>
+    /// <summary>Invoked when a blood moon night begins.</summary>
     public event Action OnBloodMoonStart;
 
-    // ==================== 只读状态属性 ====================
-
-    /// <summary>当前阶段</summary>
+    /// <summary>Current phase.</summary>
     public GamePhase CurrentPhase { get; private set; } = GamePhase.Day;
 
-    /// <summary>当前是否白天（不含黄昏）</summary>
+    /// <summary>True during day (not dusk).</summary>
     public bool IsDay => CurrentPhase == GamePhase.Day;
 
-    /// <summary>当前是否黄昏</summary>
+    /// <summary>True during dusk.</summary>
     public bool IsDusk => CurrentPhase == GamePhase.Dusk;
 
-    /// <summary>当前是否夜晚</summary>
+    /// <summary>True during night.</summary>
     public bool IsNight => CurrentPhase == GamePhase.Night;
 
-    /// <summary>当前是否血月夜</summary>
+    /// <summary>True if this night is a blood moon.</summary>
     public bool IsBloodMoon { get; private set; }
 
-    /// <summary>当前天数（从第 1 天开始）</summary>
+    /// <summary>1-based day counter.</summary>
     public int DayCount { get; private set; } = 1;
 
-    /// <summary>当前阶段剩余时间（秒）</summary>
+    /// <summary>Seconds left in the current phase.</summary>
     public float TimeRemaining { get; private set; }
-
-    // ==================== 私有变量 ====================
 
     private float _transitionTimer;
     private bool _isTransitioning;
@@ -105,8 +94,6 @@ public class DayNightManager : MonoBehaviour
     private float _transitionFromIntensity;
     private Color _transitionToColor;
     private float _transitionToIntensity;
-
-    // ==================== Unity 生命周期 ====================
 
     private void Awake()
     {
@@ -131,8 +118,6 @@ public class DayNightManager : MonoBehaviour
         TickTransition();
     }
 
-    // ==================== 阶段切换逻辑 ====================
-
     private void TickTimer()
     {
         TimeRemaining -= Time.deltaTime;
@@ -154,7 +139,7 @@ public class DayNightManager : MonoBehaviour
         TimeRemaining = dayDuration;
         BeginTransition(dayColor, dayIntensity);
         OnDayStart?.Invoke();
-        Debug.Log($"[DayNightManager] 第 {DayCount} 天 — 白天开始");
+        Debug.Log($"[DayNightManager] Day {DayCount} — day started.");
     }
 
     private void EnterDusk()
@@ -163,7 +148,7 @@ public class DayNightManager : MonoBehaviour
         TimeRemaining = duskDuration;
         BeginTransition(duskColor, duskIntensity);
         OnDuskStart?.Invoke();
-        Debug.Log($"[DayNightManager] 第 {DayCount} 天 — 黄昏，快回家！（剩 {duskDuration}s）");
+        Debug.Log($"[DayNightManager] Day {DayCount} — dusk ({duskDuration}s).");
     }
 
     private void EnterNight()
@@ -178,17 +163,15 @@ public class DayNightManager : MonoBehaviour
         {
             BeginTransition(bloodMoonColor, nightIntensity);
             OnBloodMoonStart?.Invoke();
-            Debug.Log($"[DayNightManager] 第 {DayCount} 天 — 血月之夜！");
+            Debug.Log($"[DayNightManager] Day {DayCount} — blood moon.");
         }
         else
         {
             BeginTransition(nightColor, nightIntensity);
             OnNightStart?.Invoke();
-            Debug.Log($"[DayNightManager] 第 {DayCount} 天 — 夜晚开始");
+            Debug.Log($"[DayNightManager] Day {DayCount} — night started.");
         }
     }
-
-    // ==================== 光照过渡 ====================
 
     private void BeginTransition(Color toColor, float toIntensity)
     {
@@ -221,11 +204,8 @@ public class DayNightManager : MonoBehaviour
         globalLight.intensity = intensity;
     }
 
-    // ==================== 工具方法 ====================
-
     /// <summary>
-    /// 返回当前阶段进度（0 = 刚开始，1 = 快结束）。
-    /// 可用于 HUD 昼夜进度条。
+    /// Phase progress 0 = start, 1 = end. Useful for a day/night HUD bar.
     /// </summary>
     public float GetPhaseProgress()
     {
@@ -238,8 +218,8 @@ public class DayNightManager : MonoBehaviour
         return 1f - Mathf.Clamp01(TimeRemaining / total);
     }
 
-    /// <summary>强制跳过当前阶段（测试用）</summary>
-    [ContextMenu("Debug: 跳过当前阶段")]
+    /// <summary>Debug: force the current phase to end.</summary>
+    [ContextMenu("Debug: Skip current phase")]
     public void DebugSkipPhase()
     {
         TimeRemaining = 0f;

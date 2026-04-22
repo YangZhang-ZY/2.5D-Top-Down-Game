@@ -158,6 +158,8 @@ public class WarriorController : EnemyBase
 
     private void Start()
     {
+        base.Start();
+
         _patrolOrigin = transform.position;
 
         // 创建各状态实例

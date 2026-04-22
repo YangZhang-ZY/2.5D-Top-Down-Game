@@ -3,47 +3,47 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// 背包核心逻辑。管理槽位、容量、负重、添加/移除/整理。
-/// 可挂在 Player 或单例 GameObject 上。
+/// Inventory: slots, capacity, weight, add/remove/sort.
+/// Attach to the player or a dedicated manager object.
 ///
-/// 使用步骤：
-/// 1. 挂到场景中的 GameObject（如 Player）
-/// 2. 设置 capacity、maxWeight
-/// 3. 收集系统调用 AddItem，商店调用 RemoveItem
-/// 4. UI 订阅 OnInventoryChanged 刷新显示
+/// Setup:
+/// 1. Add to a GameObject (e.g. Player).
+/// 2. Set capacity and maxWeight.
+/// 3. Pickups call AddItem; shops call RemoveItem.
+/// 4. UI listens to OnInventoryChanged to refresh.
 /// </summary>
 public class Inventory : MonoBehaviour
 {
-    [Header("背包配置")]
-    [Tooltip("格子数量，后续可升级")]
+    [Header("Inventory")]
+    [Tooltip("Number of slots (can be increased at runtime).")]
     [Min(1)]
     public int capacity = 20;
 
-    [Tooltip("最大负重，后续可升级")]
+    [Tooltip("Maximum carry weight.")]
     [Min(0f)]
     public float maxWeight = 100f;
 
-    [Header("事件")]
-    [Tooltip("物品变化时触发，供 UI 刷新")]
+    [Header("Events")]
+    [Tooltip("Raised when contents change; use for UI refresh.")]
     public UnityEvent OnInventoryChanged = new UnityEvent();
 
-    [Header("测试")]
-    [Tooltip("测试添加物品时使用，留空则从 Resources 查找")]
+    [Header("Testing")]
+    [Tooltip("Used by Test Add Item; if empty, loads from Resources.")]
     [SerializeField] private ItemData testItem;
 
-    [Header("调试")]
-    [Tooltip("勾选后，每次背包变化会在 Console 打印所有槽位")]
+    [Header("Debug")]
+    [Tooltip("When enabled, logs all slots to the Console on each change.")]
     public bool debugLogOnInventoryChanged;
 
     private List<InventorySlot> _slots = new List<InventorySlot>();
 
-    /// <summary>所有槽位（只读，供 UI 绑定）</summary>
+    /// <summary>All slots (read-only, for UI binding).</summary>
     public IReadOnlyList<InventorySlot> Slots => _slots;
 
-    /// <summary>当前负重</summary>
+    /// <summary>Current total weight.</summary>
     public float CurrentWeight => GetCurrentWeight();
 
-    /// <summary>是否超重</summary>
+    /// <summary>True if over maxWeight.</summary>
     public bool IsOverweight => CurrentWeight > maxWeight;
 
     private void Awake()
@@ -51,23 +51,23 @@ public class Inventory : MonoBehaviour
         EnsureSlotCount();
     }
 
-    /// <summary>确保槽位数量与 capacity 一致</summary>
+    /// <summary>Keeps internal slot list length in sync with capacity.</summary>
     private void EnsureSlotCount()
     {
         while (_slots.Count < capacity)
             _slots.Add(new InventorySlot());
     }
 
-    /// <summary>在 Console 打印当前所有槽位（运行中：选中物体 → Inventory 组件标题栏右键）</summary>
-    [ContextMenu("Debug: 打印所有槽位")]
+    /// <summary>Logs every slot (context menu on component in Play mode).</summary>
+    [ContextMenu("Debug: Print All Slots")]
     public void DebugPrintAllSlots()
     {
-        Debug.Log($"=== Inventory [{gameObject.name}] 槽位数={_slots.Count} 负重={GetCurrentWeight():F2}/{maxWeight} ===");
+        Debug.Log($"=== Inventory [{gameObject.name}] slots={_slots.Count} weight={GetCurrentWeight():F2}/{maxWeight} ===");
         for (int i = 0; i < _slots.Count; i++)
         {
             var s = _slots[i];
             if (s == null || s.IsEmpty)
-                Debug.Log($"  [{i}] 空");
+                Debug.Log($"  [{i}] empty");
             else
                 Debug.Log($"  [{i}] {s.item?.displayName} (id={s.item?.id}) x{s.count}");
         }
@@ -76,13 +76,13 @@ public class Inventory : MonoBehaviour
     private void DebugLogSlotsIfEnabled(string reason)
     {
         if (!debugLogOnInventoryChanged) return;
-        Debug.Log($"[Inventory] {reason} → 打印槽位");
+        Debug.Log($"[Inventory] {reason} — dumping slots");
         DebugPrintAllSlots();
     }
 
     /// <summary>
-    /// 添加物品。优先堆叠到已有同物品槽位，再占用空槽。
-    /// 受负重和容量限制，返回实际添加数量。
+    /// Adds items: stacks into matching slots first, then empty slots.
+    /// Respects weight and capacity; returns how many were actually added.
     /// </summary>
     public int AddItem(ItemData item, int count)
     {
@@ -91,7 +91,7 @@ public class Inventory : MonoBehaviour
         int remaining = count;
         float weightPerUnit = item.weight;
 
-        // 1. 先尝试堆叠到已有同物品槽位（空槽必须走阶段 2 的 Set，不能只 count+= 否则会 item 仍为 null）
+        // 1) Stack onto existing stacks (empty slots are handled in step 2 with Set)
         foreach (var slot in _slots)
         {
             if (remaining <= 0) break;
@@ -114,7 +114,7 @@ public class Inventory : MonoBehaviour
             remaining -= toAdd;
         }
 
-        // 2. 再占用空槽
+        // 2) Fill empty slots
         foreach (var slot in _slots)
         {
             if (remaining <= 0) break;
@@ -138,15 +138,15 @@ public class Inventory : MonoBehaviour
         int added = count - remaining;
         if (added > 0)
         {
-            DebugLogSlotsIfEnabled($"AddItem 成功 +{added}");
+            DebugLogSlotsIfEnabled($"AddItem +{added}");
             OnInventoryChanged?.Invoke();
         }
 
         return added;
     }
 
-    /// <summary>从指定槽位移除物品</summary>
-    /// <returns>实际移除数量</returns>
+    /// <summary>Removes from a specific slot.</summary>
+    /// <returns>Amount actually removed.</returns>
     public int RemoveItem(int slotIndex, int count)
     {
         if (slotIndex < 0 || slotIndex >= _slots.Count) return 0;
@@ -160,15 +160,15 @@ public class Inventory : MonoBehaviour
 
         if (toRemove > 0)
         {
-            DebugLogSlotsIfEnabled($"RemoveItem 槽{slotIndex} -{toRemove}");
+            DebugLogSlotsIfEnabled($"RemoveItem slot {slotIndex} -{toRemove}");
             OnInventoryChanged?.Invoke();
         }
 
         return toRemove;
     }
 
-    /// <summary>移除指定物品（从后往前找，优先清空尾槽）</summary>
-    /// <returns>实际移除数量</returns>
+    /// <summary>Removes by item type (searches from the end of the list).</summary>
+    /// <returns>Amount actually removed.</returns>
     public int RemoveItem(ItemData item, int count)
     {
         if (item == null || count <= 0) return 0;
@@ -196,13 +196,13 @@ public class Inventory : MonoBehaviour
         return removed;
     }
 
-    /// <summary>能否放入指定数量的物品（考虑容量、负重、堆叠）</summary>
+    /// <summary>Whether the inventory can accept this many items (capacity, weight, stacks).</summary>
     public bool HasSpace(ItemData item, int count)
     {
         return CanAdd(item, count);
     }
 
-    /// <summary>能否放入指定数量（纯计算，不修改背包）</summary>
+    /// <summary>Whether addition is possible without modifying the inventory.</summary>
     public bool CanAdd(ItemData item, int count)
     {
         if (item == null || !item.IsValid || count <= 0) return false;
@@ -227,7 +227,7 @@ public class Inventory : MonoBehaviour
         return canAdd >= count;
     }
 
-    /// <summary>计算当前总负重</summary>
+    /// <summary>Current total weight.</summary>
     public float GetCurrentWeight()
     {
         float total = 0f;
@@ -236,10 +236,31 @@ public class Inventory : MonoBehaviour
         return total;
     }
 
-    /// <summary>整理背包：按类型、名称排序，可堆叠的合并</summary>
+    /// <summary>Total count of an item across all stacks.</summary>
+    public int GetItemCount(ItemData item)
+    {
+        if (item == null || !item.IsValid) return 0;
+        int total = 0;
+        foreach (var slot in _slots)
+        {
+            if (!slot.IsEmpty && slot.item == item)
+                total += slot.count;
+        }
+        return total;
+    }
+
+    /// <summary>True if at least count items are present. count &lt;= 0 always passes.</summary>
+    public bool HasCount(ItemData item, int count)
+    {
+        if (count <= 0) return true;
+        if (item == null || !item.IsValid) return false;
+        return GetItemCount(item) >= count;
+    }
+
+    /// <summary>Sorts by type and id, merges stacks.</summary>
     public void Sort()
     {
-        // 1. 收集所有非空槽位内容
+        // 1) Collect non-empty slots
         var items = new List<(ItemData item, int count)>();
         foreach (var slot in _slots)
         {
@@ -250,7 +271,7 @@ public class Inventory : MonoBehaviour
             }
         }
 
-        // 2. 合并同物品
+        // 2) Merge same item
         var merged = new Dictionary<ItemData, int>();
         foreach (var (item, count) in items)
         {
@@ -260,7 +281,7 @@ public class Inventory : MonoBehaviour
                 merged[item] = count;
         }
 
-        // 3. 按类型、名称排序后放回
+        // 3) Sort by type then id
         var sorted = new List<(ItemData item, int count)>();
         foreach (var kv in merged)
             sorted.Add((kv.Key, kv.Value));
@@ -272,7 +293,7 @@ public class Inventory : MonoBehaviour
             return string.CompareOrdinal(a.item.id, b.item.id);
         });
 
-        // 4. 按顺序放入槽位（每个槽位可堆叠到 maxStack）
+        // 4) Refill slots up to maxStack
         int slotIdx = 0;
         foreach (var (item, totalCount) in sorted)
         {
@@ -292,7 +313,7 @@ public class Inventory : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    /// <summary>交换两个槽位（用于拖拽、整理）</summary>
+    /// <summary>Swap two slots (drag-and-drop, etc.).</summary>
     public void SwapSlots(int indexA, int indexB)
     {
         if (indexA < 0 || indexA >= _slots.Count || indexB < 0 || indexB >= _slots.Count) return;
@@ -313,7 +334,7 @@ public class Inventory : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    /// <summary>升级格子数量（仅可增加）</summary>
+    /// <summary>Increases slot count (only grows).</summary>
     public void UpgradeCapacity(int newCapacity)
     {
         if (newCapacity <= capacity) return;
@@ -323,7 +344,7 @@ public class Inventory : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    /// <summary>升级最大负重</summary>
+    /// <summary>Sets a new max weight.</summary>
     public void UpgradeMaxWeight(float newMaxWeight)
     {
         maxWeight = Mathf.Max(0f, newMaxWeight);
@@ -331,7 +352,7 @@ public class Inventory : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
-    /// <summary>测试用：添加物品。Inspector 中右键脚本 → Test Add Item</summary>
+    /// <summary>Context menu: add test stack.</summary>
     [ContextMenu("Test Add Item")]
     private void TestAddItem()
     {
@@ -341,12 +362,12 @@ public class Inventory : MonoBehaviour
             var items = Resources.LoadAll<ItemData>("");
             if (items == null || items.Length == 0)
             {
-                Debug.LogWarning("[Inventory] 请在 Inspector 指定 testItem，或在 Resources 文件夹放置 ItemData。");
+                Debug.LogWarning("[Inventory] Assign testItem in the Inspector or place ItemData assets under Resources.");
                 return;
             }
             item = items[0];
         }
         int added = AddItem(item, 5);
-        Debug.Log($"[Inventory] 测试添加 {item.displayName} x5，实际添加 {added}");
+        Debug.Log($"[Inventory] Test add {item.displayName} x5 — added {added}.");
     }
 }
