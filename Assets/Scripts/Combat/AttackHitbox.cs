@@ -33,7 +33,7 @@ public class AttackHitbox : MonoBehaviour
     /// <param name="damage">Damage amount.</param>
     /// <param name="direction">Facing for placement / knockback.</param>
     /// <param name="offset">Local offset along direction from the owner.</param>
-    /// <param name="knockbackForce">0 for none.</param>
+    /// <param name="knockbackForce">叠到目标速度上的击退量（世界单位/秒）；Enemy 仍乘 knockbackResistance；不除质量。</param>
     public void EnableHitbox(float damage, Vector2 direction, float offset, float knockbackForce = 0f)
     {
         _hitThisAttack.Clear();

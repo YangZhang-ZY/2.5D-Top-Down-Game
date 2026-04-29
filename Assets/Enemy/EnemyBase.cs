@@ -60,6 +60,9 @@ public abstract class EnemyBase : MonoBehaviour
     [Range(0f, 1f)]
     public float knockbackResistance = 0f;
 
+    [Tooltip("击退后短时间内 AI 不写 linearVelocity、StopMoving 也不清零，避免 Chase/Idle 每帧抵消击退（与 Rigidbody2D 质量无关）。")]
+    public float knockbackMovementPauseDuration = 0.15f;
+
     [Tooltip("受击闪白持续时间（秒），闪白效果需配合 HitFlash 等脚本")]
     public float hitFlashDuration = 0.1f;
 
@@ -108,6 +111,9 @@ public abstract class EnemyBase : MonoBehaviour
 
     /// <summary>是否因玩家挑衅或被打而优先追击玩家（后续可扩展城墙等目标）</summary>
     protected bool playerAggroActive;
+
+    /// <summary>击退后 AI 暂停接管速度剩余时间（<see cref="knockbackMovementPauseDuration"/>）。</summary>
+    protected float knockbackMovementPauseTimer;
 
 
     // ==================== 四、Unity 生命周期 ====================
@@ -272,6 +278,7 @@ public abstract class EnemyBase : MonoBehaviour
     protected virtual void OnDeath()
     {
         isDead = true;
+        knockbackMovementPauseTimer = 0f;
 
         // 停止移动
         rb.linearVelocity = Vector2.zero;
@@ -300,7 +307,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     /// <summary>
     /// 根据最近一次 DamageInfo 应用击退。
-    /// 若 canBeKnockedBack 为 false 或 knockbackResistance 为 1，则不击退。
+    /// 使用速度叠加；<see cref="DamageInfo.knockbackForce"/> 为叠到速度上的量（世界单位/秒，再乘 <see cref="knockbackResistance"/> 因子），不除以 Rigidbody2D.mass。
     /// </summary>
     protected virtual void ApplyKnockbackFromLastDamage()
     {
@@ -314,7 +321,34 @@ public abstract class EnemyBase : MonoBehaviour
         if (effectiveForce <= 0.01f) return;
 
         Vector2 dir = lastDamageInfo.knockbackDirection.normalized;
-        rb.AddForce(dir * effectiveForce, ForceMode2D.Impulse);
+        rb.linearVelocity += dir * effectiveForce;
+
+        knockbackMovementPauseTimer = Mathf.Max(knockbackMovementPauseTimer, knockbackMovementPauseDuration);
+    }
+
+    /// <summary>每帧递减击退暂停计时（状态机 Update 开头调用）。</summary>
+    protected void TickKnockbackMovementPause(float deltaTime)
+    {
+        if (knockbackMovementPauseTimer > 0f)
+            knockbackMovementPauseTimer -= deltaTime;
+    }
+
+    /// <summary>击退暂停期间不应由 AI 写入速度或 StopMoving 归零。</summary>
+    protected bool IsKnockbackPausingMovement => knockbackMovementPauseTimer > 0f;
+
+    /// <summary>朝世界坐标点移动（与 <see cref="moveSpeed"/> 一致）；击退暂停期间跳过。</summary>
+    protected void MoveTowardsWorldPoint(Vector2 worldPoint)
+    {
+        Vector2 dir = worldPoint - (Vector2)transform.position;
+        ApplyChaseVelocityFromDirection(dir);
+    }
+
+    void ApplyChaseVelocityFromDirection(Vector2 toTargetDelta)
+    {
+        if (rb == null) return;
+        if (IsKnockbackPausingMovement) return;
+        if (toTargetDelta.sqrMagnitude < 0.01f) return;
+        rb.linearVelocity = toTargetDelta.normalized * moveSpeed;
     }
 
 
@@ -347,8 +381,8 @@ public abstract class EnemyBase : MonoBehaviour
     protected void MoveTowardsPlayer()
     {
         if (player == null) return;
-        Vector2 dir = ((Vector2)player.position - (Vector2)transform.position).normalized;
-        rb.linearVelocity = dir * moveSpeed;
+        Vector2 dir = ((Vector2)player.position - (Vector2)transform.position);
+        ApplyChaseVelocityFromDirection(dir);
     }
 
     /// <summary>当前 AI 移动目标：优先仇恨玩家，否则首要目标（水晶），否则追击范围内的玩家。</summary>
@@ -372,9 +406,8 @@ public abstract class EnemyBase : MonoBehaviour
     {
         var t = GetMoveTarget();
         if (t == null || rb == null) return;
-        Vector2 dir = ((Vector2)t.position - (Vector2)transform.position).normalized;
-        if (dir.sqrMagnitude < 0.01f) return;
-        rb.linearVelocity = dir * moveSpeed;
+        Vector2 dir = ((Vector2)t.position - (Vector2)transform.position);
+        ApplyChaseVelocityFromDirection(dir);
     }
 
     /// <summary>与当前移动目标的距离是否在攻击范围内</summary>
@@ -424,6 +457,8 @@ public abstract class EnemyBase : MonoBehaviour
     /// <summary>停止移动</summary>
     protected void StopMoving()
     {
+        if (rb == null) return;
+        if (IsKnockbackPausingMovement) return;
         rb.linearVelocity = Vector2.zero;
     }
 }

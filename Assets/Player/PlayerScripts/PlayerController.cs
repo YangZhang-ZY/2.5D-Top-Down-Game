@@ -60,6 +60,8 @@ public class PlayerController : MonoBehaviour
         public float lungeDistance = 0f;
         [Tooltip("本段攻击造成的伤害值")]
         public float attackDamage = 1f;
+        [Tooltip("击退：叠到敌人 linearVelocity 上的速度大小（世界单位/秒），再乘敌人 knockbackResistance；与敌人 Rigidbody2D 质量无关。0=无击退")]
+        public float knockbackForce = 2f;
         [Tooltip("本段攻击 Hitbox 相对玩家的偏移距离（朝攻击方向）。未启用分方向时使用")]
         public float hitboxOffset = 0.5f;
         [Tooltip("勾选后，上下左右(WASD)使用各自的 Hitbox 偏移")]
@@ -104,8 +106,8 @@ public class PlayerController : MonoBehaviour
     [Header("Attack Sequence")]
     public AttackStepConfig[] attackSteps = new AttackStepConfig[]
     {
-        new AttackStepConfig { duration = 0.35f, recoveryTime = 0.3f, lungeDistance = 0.3f, attackDamage = 1f, hitboxOffset = 0.4f },
-        new AttackStepConfig { duration = 0.35f, recoveryTime = 0.3f, lungeDistance = 0.35f, attackDamage = 2f, hitboxOffset = 0.6f },
+        new AttackStepConfig { duration = 0.35f, recoveryTime = 0.3f, lungeDistance = 0.3f, attackDamage = 1f, knockbackForce = 2f, hitboxOffset = 0.4f },
+        new AttackStepConfig { duration = 0.35f, recoveryTime = 0.3f, lungeDistance = 0.35f, attackDamage = 2f, knockbackForce = 2.5f, hitboxOffset = 0.6f },
     };
 
     [Header("攻击碰撞")]
@@ -165,14 +167,25 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        //Movement
-        Moveinput = inputActions.Player.Movement.ReadValue<Vector2>();
+        if (PlayerInputBlocker.IsBlocked)
+        {
+            Moveinput = Vector2.zero;
+            wantAttack = false;
+            wantDash = false;
+            if (rb != null)
+                rb.linearVelocity = Vector2.zero;
+        }
+        else
+        {
+            //Movement
+            Moveinput = inputActions.Player.Movement.ReadValue<Vector2>();
 
-        //Attack
-        wantAttack = inputActions.Player.Attack.WasPressedThisFrame();
-        //Dash（Space 键，Input Actions 重新生成后可用 FindAction）
-        var dashAction = inputActions.Player.Get().FindAction("Dash", throwIfNotFound: false);
-        wantDash = dashAction != null ? dashAction.WasPressedThisFrame() : Keyboard.current?.spaceKey.wasPressedThisFrame ?? false;
+            //Attack
+            wantAttack = inputActions.Player.Attack.WasPressedThisFrame();
+            //Dash（Space 键，Input Actions 重新生成后可用 FindAction）
+            var dashAction = inputActions.Player.Get().FindAction("Dash", throwIfNotFound: false);
+            wantDash = dashAction != null ? dashAction.WasPressedThisFrame() : Keyboard.current?.spaceKey.wasPressedThisFrame ?? false;
+        }
 
         if (attackCoolDownTimer > 0f)
             attackCoolDownTimer -= Time.deltaTime;

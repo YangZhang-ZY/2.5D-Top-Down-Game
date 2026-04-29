@@ -56,7 +56,7 @@ public class PlayerAttackState : StateBase<PlayerController>
         {
             Vector2 dir = ctx.LastMoveDiraction.sqrMagnitude > 0.01f ? ctx.LastMoveDiraction.normalized : Vector2.down;
             float offset = config.GetHitboxOffsetForDirection(dir);
-            ctx.attackHitbox.EnableHitbox(config.attackDamage, dir, offset);
+            ctx.attackHitbox.EnableHitbox(config.attackDamage, dir, offset, config.knockbackForce);
         }
     }
 

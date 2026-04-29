@@ -34,7 +34,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Build",
+                    "name": "Interact",
                     "type": "Button",
                     "id": "5d344582-3e20-4866-a3b3-2fd9547c633e",
                     "expectedControlType": "",
@@ -128,7 +128,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard",
-                    "action": "Build",
+                    "action": "Interact",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

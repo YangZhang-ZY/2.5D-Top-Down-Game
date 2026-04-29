@@ -4,7 +4,7 @@ using StateMachine;
 
 /// <summary>
 /// Warrior 敌人：使用状态机管理 Idle / Chase / Attack / Block / Death 状态。
-/// 继承 EnemyBase，复用移动、受击、击退、死亡等通用逻辑。
+/// 继承 <see cref="StatefulEnemyControllerBase{TSelf}"/>，与 ChaseMelee 等共用同一套状态机驱动框架。
 ///
 /// 【状态机流程】
 /// Patrol → Chase（有移动目标且未进近战：水晶或玩家）
@@ -33,7 +33,7 @@ using StateMachine;
 /// 3. 在 Animator 中配置参数和状态
 /// </summary>
 [RequireComponent(typeof(Health), typeof(Rigidbody2D))]
-public class WarriorController : EnemyBase
+public class WarriorController : StatefulEnemyControllerBase<WarriorController>
 {
     // ==================== 一、Inspector 参数 ====================
 
@@ -104,7 +104,6 @@ public class WarriorController : EnemyBase
 
     // ==================== 二、状态机与状态实例 ====================
 
-    private StateMachine<WarriorController> _stateMachine;
     private WarriorPatrolState _patrolState;
     private WarriorChaseState _chaseState;
     private WarriorAttack1State _attack1State;
@@ -156,10 +155,8 @@ public class WarriorController : EnemyBase
             attackHitbox.owner = gameObject;
     }
 
-    private void Start()
+    protected override void InitializeStateMachine()
     {
-        base.Start();
-
         _patrolOrigin = transform.position;
 
         // 创建各状态实例
@@ -176,9 +173,7 @@ public class WarriorController : EnemyBase
         _stateMachine.Initialize(this, _patrolState);
 
         // ---------- 添加状态转换 ----------
-
-        // 全局转换：任意状态 → Death（HP 归零时）
-        _stateMachine.AddGlobalTransition(_deathState, ctx => ctx.isDead);
+        // Death：由基类 OnDeath 切入 _deathState，此处不再 AddGlobalTransition
 
         // Patrol → Chase：有移动目标且尚未进入近战
         _stateMachine.AddTransition(_patrolState, _chaseState, ctx =>
@@ -209,30 +204,19 @@ public class WarriorController : EnemyBase
         // Stay → Chase：停留结束且仍可追击
         _stateMachine.AddTransition(_stayState, _chaseState, ctx =>
             ctx.stayFinished && ctx.IsCurrentTargetInChaseRange());
+
+        RegisterDeathState(_deathState);
     }
 
-    protected override void Update()
+    protected override void OnEnemyExtraTimers(float dt)
     {
-        if (isDead) return;
-
-        // 攻击冷却倒计时（基类逻辑）
-        if (attackCooldownTimer > 0f)
-            attackCooldownTimer -= Time.deltaTime;
-
-        // 格挡冷却倒计时
         if (_blockCooldownTimer > 0f)
-            _blockCooldownTimer -= Time.deltaTime;
+            _blockCooldownTimer -= dt;
+    }
 
-        UpdateAggroProvoke();
-
-        // AI 决策：仅对玩家目标随机攻击/格挡（对水晶不打格挡）
+    protected override void OnEnemyTickBeforeStateMachine()
+    {
         TickAIDecision();
-
-        // 运行状态机：检查转换条件，执行当前状态的 Update
-        _stateMachine?.Update(Time.deltaTime);
-
-        // 更新 Animator 参数（Speed、FaceX）
-        UpdateAnimatorParameters();
     }
 
 
@@ -264,17 +248,6 @@ public class WarriorController : EnemyBase
         }
     }
 
-    protected override void UpdateAI()
-    {
-        // 逻辑已交给状态机，此处留空
-    }
-
-    protected override void PerformAttack()
-    {
-        // 攻击由 WarriorAttack1State / WarriorAttack2State 执行，此处留空
-    }
-
-
     // ==================== 六、供状态和转换条件调用的方法 ====================
 
     /// <summary>供状态类调用：停止移动</summary>
@@ -289,10 +262,7 @@ public class WarriorController : EnemyBase
     /// <summary>供状态类调用：朝指定点移动</summary>
     public void MoveTowardsPointPublic(Vector2 target)
     {
-        if (rb == null) return;
-        Vector2 dir = (target - (Vector2)transform.position).normalized;
-        if (dir.sqrMagnitude < 0.01f) return;
-        rb.linearVelocity = dir * moveSpeed;
+        MoveTowardsWorldPoint(target);
     }
 
     /// <summary>在巡逻范围内随机获取一个目标点</summary>

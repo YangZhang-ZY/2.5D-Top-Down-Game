@@ -33,6 +33,7 @@ public class InventoryUI : MonoBehaviour
     public Button sortButton;
 
     private List<InventorySlotUI> _slotUIs = new List<InventorySlotUI>();
+    bool _inputBlockRequested;
 
     private int _selectedSlotIndex = -1;
 
@@ -58,6 +59,12 @@ public class InventoryUI : MonoBehaviour
     {
         if (inventory != null)
             inventory.OnInventoryChanged.RemoveListener(RefreshAll);
+        ReleaseInputBlockIfNeeded();
+    }
+
+    private void OnDisable()
+    {
+        ReleaseInputBlockIfNeeded();
     }
 
     private void InitSlots()
@@ -131,12 +138,14 @@ public class InventoryUI : MonoBehaviour
     public void Open()
     {
         gameObject.SetActive(true);
+        RequestInputBlockIfNeeded();
         RefreshAll();
     }
 
     /// <summary>Hides the panel.</summary>
     public void Close()
     {
+        ReleaseInputBlockIfNeeded();
         gameObject.SetActive(false);
     }
 
@@ -147,5 +156,19 @@ public class InventoryUI : MonoBehaviour
             Close();
         else
             Open();
+    }
+
+    void RequestInputBlockIfNeeded()
+    {
+        if (_inputBlockRequested) return;
+        PlayerInputBlocker.Request(this);
+        _inputBlockRequested = true;
+    }
+
+    void ReleaseInputBlockIfNeeded()
+    {
+        if (!_inputBlockRequested) return;
+        PlayerInputBlocker.Release(this);
+        _inputBlockRequested = false;
     }
 }
