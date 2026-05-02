@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
@@ -20,10 +19,7 @@ public class GameOverManager : MonoBehaviour
 
     [SerializeField] private string gameOverMessage = "Game Over";
 
-    [Tooltip("Use either TMP or legacy Text.")]
     [SerializeField] private TextMeshProUGUI gameOverTextTMP;
-
-    [SerializeField] private Text gameOverTextLegacy;
 
     bool _triggered;
 
@@ -54,8 +50,6 @@ public class GameOverManager : MonoBehaviour
 
         if (gameOverTextTMP != null)
             gameOverTextTMP.text = gameOverMessage;
-        if (gameOverTextLegacy != null)
-            gameOverTextLegacy.text = gameOverMessage;
     }
 
     /// <summary>Call before reloading the scene or returning to menu.</summary>

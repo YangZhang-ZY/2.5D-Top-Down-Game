@@ -8,6 +8,7 @@ using UnityEngine;
 public class ChaseMeleeRecoveryState : StateBase<ChaseMeleeEnemyController>
 {
     float _timer;
+    bool _refillPostureOnExit;
 
     public override void Enter(ChaseMeleeEnemyController ctx)
     {
@@ -16,6 +17,9 @@ public class ChaseMeleeRecoveryState : StateBase<ChaseMeleeEnemyController>
         ctx.StopMovingPublic();
         ctx.SetRecoveryAnim(true);
         _timer = Mathf.Max(0f, ctx.recoveryStateDuration);
+        _refillPostureOnExit = ctx.NextRecoveryShouldRefillPosture;
+        if (_refillPostureOnExit)
+            ctx.NextRecoveryShouldRefillPosture = false;
         if (_timer <= 0f)
             ctx.recoveryFinished = true;
     }
@@ -23,6 +27,8 @@ public class ChaseMeleeRecoveryState : StateBase<ChaseMeleeEnemyController>
     public override void Exit(ChaseMeleeEnemyController ctx)
     {
         ctx.SetRecoveryAnim(false);
+        if (_refillPostureOnExit)
+            ctx.Posture?.RefillPosture();
     }
 
     public override void Update(ChaseMeleeEnemyController ctx, float dt)

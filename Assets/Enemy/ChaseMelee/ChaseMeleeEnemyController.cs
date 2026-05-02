@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// Melee chaser aligned with <see cref="WarriorController"/> flow: Idle (decision) → Chase → Attack (one swing) → Recovery → Idle.
 /// <see cref="EnemyBase.GetMoveTarget"/> handles crystal vs player; provoke / aggro on <see cref="EnemyBase"/>.
-/// Animator: bool Attack; bool Recovery (post-attack); trigger Hit; bool IsDead; float FaceX.
+/// Animator: bool Attack; bool Recovery; trigger Hit; 可选 bool Stunned（眩晕 Loop，见 animParamStunned）; bool IsDead; float FaceX.
 /// Events: OnChaseMeleeAttackHit (strike), OnChaseMeleeAttackEnd (clip end → Recovery state).
 /// </summary>
 [RequireComponent(typeof(Health), typeof(Rigidbody2D))]
@@ -32,8 +32,11 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     public float recoveryStateDuration = 0.5f;
 
     [Header("Chase melee — hit stun")]
-    [Tooltip("Seconds locked in Hit state after taking damage.")]
+    [Tooltip("破防后在 Hit 状态锁定的秒数 = 眩晕/硬直时长；与 Animator 里 Stunned 为 true 的时长一致。")]
     public float hitStunDuration = 0.25f;
+
+    [Tooltip("可选：眩晕持续状态用 Bool（如 Loop 眩晕动画）。在 Hit 状态 Enter 为 true，Leave Hit 进 Recovery 前为 false。留空则只用 Hit Trigger。")]
+    public string animParamStunned = "";
 
     [Header("Chase melee — animator")]
     [Tooltip("Bool: true while attacking (blend tree / layer).")]
@@ -47,6 +50,8 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
 
     [Header("Chase melee — references")]
     public AttackHitbox attackHitbox;
+
+    CombatPosture _posture;
 
     [Header("Debug")]
     [Tooltip("Unity Console: one line when AI state changes (old -> new). Enable on Bat prefab while tuning.")]
@@ -81,9 +86,15 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     protected override void Awake()
     {
         base.Awake();
+        _posture = GetComponent<CombatPosture>();
         if (attackHitbox != null && attackHitbox.owner == null)
             attackHitbox.owner = gameObject;
     }
+
+    /// <summary>仅当从 <see cref="ChaseMeleeHitState"/> 进入下一次 Recovery 时在 Exit 补满架势。</summary>
+    public bool NextRecoveryShouldRefillPosture { get; set; }
+
+    public CombatPosture Posture => _posture;
 
     protected override void InitializeStateMachine()
     {
@@ -111,9 +122,9 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
 
         _stateMachine.AddTransition(_attackState, _recoveryState, ctx => ctx.attackFinished);
 
-        _stateMachine.AddTransition(_recoveryState, _idleState, ctx => ctx.recoveryFinished);
+        _stateMachine.AddTransition(_hitState, _recoveryState, ctx => ctx.hitRecoveryFinished);
 
-        _stateMachine.AddTransition(_hitState, _idleState, ctx => ctx.hitRecoveryFinished);
+        _stateMachine.AddTransition(_recoveryState, _idleState, ctx => ctx.recoveryFinished);
 
         _stateMachine.AddTransition(_idleState, _attackState, ctx =>
             ctx.GetMoveTarget() != null && ctx.IsCurrentTargetInAttackRange() && ctx.CanAttackPublic());
@@ -138,10 +149,22 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     protected override void OnDamaged(float dmg)
     {
         if (isDead) return;
+        bool stagger;
+        if (_posture == null || !_posture.enabled || _posture.MaxPosture <= 0f)
+            stagger = true;
+        else
+            stagger = _posture.ApplyPostureDamageFromHp(dmg);
+
         var inHit = _stateMachine?.CurrentState == _hitState;
-        if (!inHit)
+        if (stagger && !inHit)
             pendingHit = true;
         base.OnDamaged(dmg);
+    }
+
+    protected override bool ShouldApplyKnockbackFromDamage(DamageInfo info)
+    {
+        return _posture == null || !_posture.enabled || _posture.MaxPosture <= 0f ||
+               _posture.LastHitBrokePosture;
     }
 
     /// <summary>Suppress default Hit trigger here; <see cref="ChaseMeleeHitState"/> fires it once per stun.</summary>
@@ -162,6 +185,12 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     {
         if (animator != null && !string.IsNullOrEmpty(animTriggerHit))
             animator.SetTrigger(animTriggerHit);
+    }
+
+    public void SetStunnedAnim(bool value)
+    {
+        if (animator == null || string.IsNullOrEmpty(animParamStunned)) return;
+        animator.SetBool(animParamStunned, value);
     }
 
     public bool CanAttackPublic() => CanAttack();

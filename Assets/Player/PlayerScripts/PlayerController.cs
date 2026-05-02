@@ -9,6 +9,12 @@ public class PlayerController : MonoBehaviour
     [Header("Movement")]
     public float MoveSpeed = 5.0f;
 
+    [Tooltip("开启后，WASD 沿「摄像机在 XY 行走平面上」的左右/上下移动；转镜头后按键相对屏幕不变。关闭则用世界 XY。")]
+    [SerializeField] bool cameraRelativeMovement = true;
+
+    [Tooltip("Rigidbody2D 在 XY 上移动时与 Camera Pivot 绕 Z 转一致，填 (0,0,1)。")]
+    [SerializeField] Vector3 walkPlaneNormal = Vector3.forward;
+
 
     // ==================== 组件引用（Awake 获取） ====================
     public Rigidbody2D rb;
@@ -201,6 +207,35 @@ public class PlayerController : MonoBehaviour
         }
 
         stateMachine.Update(Time.deltaTime);
+    }
+
+    /// <summary>
+    /// 将归一化输入方向（与 Input System 的 Movement 轴向一致）映射到世界 XY 上的单位方向，用于 <see cref="Rigidbody2D.linearVelocity"/> 等。
+    /// </summary>
+    public Vector2 TransformMoveInputToWorldPlanar(Vector2 normalizedInput)
+    {
+        if (normalizedInput.sqrMagnitude < 1e-6f)
+            return Vector2.zero;
+
+        Vector2 inputN = normalizedInput.normalized;
+        if (!cameraRelativeMovement)
+            return inputN;
+
+        Camera cam = Camera.main;
+        if (cam == null)
+            return inputN;
+
+        Vector3 n = walkPlaneNormal.sqrMagnitude > 1e-6f ? walkPlaneNormal.normalized : Vector3.forward;
+        Vector3 r3 = Vector3.ProjectOnPlane(cam.transform.right, n);
+        Vector3 u3 = Vector3.ProjectOnPlane(cam.transform.up, n);
+        if (r3.sqrMagnitude < 1e-6f || u3.sqrMagnitude < 1e-6f)
+            return inputN;
+        r3.Normalize();
+        u3.Normalize();
+        Vector2 r2 = new Vector2(r3.x, r3.y);
+        Vector2 u2 = new Vector2(u3.x, u3.y);
+        Vector2 world = r2 * inputN.x + u2 * inputN.y;
+        return world.sqrMagnitude > 1e-6f ? world.normalized : inputN;
     }
 
     private void OnDestroy()

@@ -83,6 +83,13 @@ public class Health : MonoBehaviour, IDamageable
         ignoreDamage = ignore;
     }
 
+    /// <summary>Restores HP (capped at max). Use for boss heal / pickups.</summary>
+    public void Heal(int amount)
+    {
+        if (amount <= 0 || IsDead) return;
+        _currentHP = Mathf.Min(maxHP, _currentHP + amount);
+    }
+
     /// <summary>Restores HP to max (respawn, heal).</summary>
     public void ResetHP()
     {

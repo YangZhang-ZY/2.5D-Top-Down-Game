@@ -101,6 +101,8 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
     [Tooltip("攻击碰撞盒（子物体，需有 AttackHitbox 和 Collider2D）")]
     public AttackHitbox attackHitbox;
 
+    CombatPosture _posture;
+
 
     // ==================== 二、状态机与状态实例 ====================
 
@@ -148,9 +150,13 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
 
     // ==================== 四、Unity 生命周期 ====================
 
+    /// <summary>有架势时仅破防播受击动画。</summary>
+    bool _warriorPlayHitEffects;
+
     protected override void Awake()
     {
         base.Awake();
+        _posture = GetComponent<CombatPosture>();
         if (attackHitbox != null && attackHitbox.owner == null)
             attackHitbox.owner = gameObject;
     }
@@ -463,5 +469,30 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
             _faceX = rb.linearVelocity.x >= 0 ? 1f : -1f;
         if (!string.IsNullOrEmpty(animParamFaceX))
             animator.SetFloat(animParamFaceX, _faceX);
+    }
+
+    protected override void OnDamaged(float dmg)
+    {
+        if (isDead) return;
+        if (_posture == null || !_posture.enabled || _posture.MaxPosture <= 0f)
+            _warriorPlayHitEffects = true;
+        else
+            _warriorPlayHitEffects = _posture.ApplyPostureDamageFromHp(dmg);
+
+        base.OnDamaged(dmg);
+    }
+
+    protected override void PlayHitEffects()
+    {
+        if (!_warriorPlayHitEffects)
+            return;
+        base.PlayHitEffects();
+        _posture?.RefillPosture();
+    }
+
+    protected override bool ShouldApplyKnockbackFromDamage(DamageInfo info)
+    {
+        return _posture == null || !_posture.enabled || _posture.MaxPosture <= 0f ||
+               _posture.LastHitBrokePosture;
     }
 }

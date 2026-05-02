@@ -2,14 +2,10 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Melee hit volume on a child of the attacker. Needs a trigger Collider2D.
-/// Each target is damaged at most once per activation.
+/// Melee hit volume on a child of the attacker. Needs a Collider2D (forced Is Trigger in Awake).
+/// Each damageable root is damaged at most once per activation.
 ///
-/// Setup:
-/// 1. Child under the player named AttackHitbox (or similar).
-/// 2. CircleCollider2D or similar, Is Trigger, sized for the attack arc.
-/// 3. This component on the same GameObject.
-/// 4. Reference from the player controller as the active hitbox.
+/// Enable 后同一帧若已与目标重叠，Unity 有时不会发 OnTriggerEnter2D；因此在开启碰撞体后会立刻用 OverlapCollider 扫一遍。
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class AttackHitbox : MonoBehaviour
@@ -18,11 +14,12 @@ public class AttackHitbox : MonoBehaviour
     [Tooltip("Damage source for DamageInfo.source (usually the player).")]
     public GameObject owner;
 
-    private readonly HashSet<GameObject> _hitThisAttack = new HashSet<GameObject>();
+    readonly HashSet<GameObject> _hitThisAttack = new HashSet<GameObject>();
+    readonly List<Collider2D> _overlapBuffer = new List<Collider2D>(24);
 
-    private Collider2D _collider;
+    Collider2D _collider;
 
-    private void Awake()
+    void Awake()
     {
         _collider = GetComponent<Collider2D>();
         _collider.isTrigger = true;
@@ -30,10 +27,6 @@ public class AttackHitbox : MonoBehaviour
     }
 
     /// <summary>Enables the collider and stores damage parameters for this swing.</summary>
-    /// <param name="damage">Damage amount.</param>
-    /// <param name="direction">Facing for placement / knockback.</param>
-    /// <param name="offset">Local offset along direction from the owner.</param>
-    /// <param name="knockbackForce">叠到目标速度上的击退量（世界单位/秒）；Enemy 仍乘 knockbackResistance；不除质量。</param>
     public void EnableHitbox(float damage, Vector2 direction, float offset, float knockbackForce = 0f)
     {
         _hitThisAttack.Clear();
@@ -41,40 +34,62 @@ public class AttackHitbox : MonoBehaviour
         _currentKnockbackDir = direction.sqrMagnitude > 0.01f ? direction.normalized : Vector2.down;
         _currentKnockbackForce = knockbackForce;
 
-        transform.localPosition = (Vector3)(_currentKnockbackDir * offset);
+        Vector3 worldOffset = new Vector3(_currentKnockbackDir.x, _currentKnockbackDir.y, 0f) * offset;
+        if (transform.parent != null)
+            transform.localPosition = transform.parent.InverseTransformVector(worldOffset);
+        else
+            transform.localPosition = worldOffset;
 
         _collider.enabled = true;
+        ApplyOverlappingHits();
     }
 
-    /// <summary>Disables the collider until the next EnableHitbox.</summary>
     public void DisableHitbox()
     {
         _collider.enabled = false;
         _hitThisAttack.Clear();
     }
 
-    private float _currentDamage;
-    private Vector2 _currentKnockbackDir;
-    private float _currentKnockbackForce;
+    float _currentDamage;
+    Vector2 _currentKnockbackDir;
+    float _currentKnockbackForce;
 
-    private void OnTriggerEnter2D(Collider2D other)
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        TryHit(other);
+    }
+
+    void ApplyOverlappingHits()
     {
         if (!_collider.enabled) return;
+        _overlapBuffer.Clear();
+        var filter = ContactFilter2D.noFilter;
+        int n = _collider.Overlap(filter, _overlapBuffer);
+        for (int i = 0; i < n; i++)
+            TryHit(_overlapBuffer[i]);
+    }
 
-        var go = other.gameObject;
-        if (_hitThisAttack.Contains(go)) return;
+    void TryHit(Collider2D other)
+    {
+        if (!_collider.enabled || other == null) return;
+        if (owner != null)
+        {
+            GameObject otherGo = other.gameObject;
+            if (otherGo == owner || other.transform.IsChildOf(owner.transform))
+                return;
+        }
 
-        var damageable = go.GetComponent<IDamageable>();
-        if (damageable == null)
-            damageable = go.GetComponentInParent<IDamageable>();
-
+        var damageable = other.GetComponent<IDamageable>() ?? other.GetComponentInParent<IDamageable>();
         if (damageable == null) return;
+        var host = damageable as MonoBehaviour;
+        GameObject dedupeKey = host != null ? host.gameObject : other.gameObject;
+        if (_hitThisAttack.Contains(dedupeKey)) return;
 
         var info = _currentKnockbackForce > 0.01f
             ? DamageInfo.CreateWithKnockback(_currentDamage, owner, _currentKnockbackDir, _currentKnockbackForce)
             : DamageInfo.Create(_currentDamage, owner);
 
         if (damageable.TakeDamage(info))
-            _hitThisAttack.Add(go);
+            _hitThisAttack.Add(dedupeKey);
     }
 }

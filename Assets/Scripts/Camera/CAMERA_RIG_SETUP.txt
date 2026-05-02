@@ -1,0 +1,20 @@
+Camera 架子的推荐配法（独立 CameraPosition，不挂在 Player 下）
+
+层级:
+  CameraPosition
+  ├── CameraFollowTarget (Target=玩家, World Offset / Smooth Time)
+  ├── PlayerCameraOrbitPivot (同物体; Q/E 转台, XY 地面选 Z Up)
+  └── Main Camera
+        SimpleFollowCamera:
+          Follow Target = 玩家
+          Update World Position 必须关闭（子相机）
+          Focus：Follow Point Offset / Look At Offset
+          Position：可选 Apply Offset As Local Position + Offset From Focus
+          Rotation：Aim At Focus（Pivot 下只调俯仰）；镜头平滑 = 瞄准时旋转平滑时间 Lens Smooth Time
+        关掉 CinemachineBrain
+
+不用 Cinemachine 时请禁用场景里的 CinemachineCamera 与 Brain.
+
+已删除: CameraOrbitFollow.cs
+
+保留: CameraFollowTarget, PlayerCameraOrbitPivot, SimpleFollowCamera

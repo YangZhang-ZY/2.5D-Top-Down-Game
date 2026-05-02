@@ -38,10 +38,11 @@ public class PlayerAttackState : StateBase<PlayerController>
 
         if (config.lungeDistance > 0.01f)
         {
-            Vector2 dir = ctx.LastMoveDiraction.sqrMagnitude > 0.01f
+            Vector2 dirInput = ctx.LastMoveDiraction.sqrMagnitude > 0.01f
                 ? ctx.LastMoveDiraction.normalized
                 : Vector2.down;
-            ctx.rb.position += dir * config.lungeDistance;
+            Vector2 dirWorld = ctx.TransformMoveInputToWorldPlanar(dirInput);
+            ctx.rb.position += dirWorld * config.lungeDistance;
         }
 
         if (ctx.animator != null)
@@ -54,9 +55,10 @@ public class PlayerAttackState : StateBase<PlayerController>
 
         if (ctx.attackHitbox != null)
         {
-            Vector2 dir = ctx.LastMoveDiraction.sqrMagnitude > 0.01f ? ctx.LastMoveDiraction.normalized : Vector2.down;
-            float offset = config.GetHitboxOffsetForDirection(dir);
-            ctx.attackHitbox.EnableHitbox(config.attackDamage, dir, offset, config.knockbackForce);
+            Vector2 dirInputHit = ctx.LastMoveDiraction.sqrMagnitude > 0.01f ? ctx.LastMoveDiraction.normalized : Vector2.down;
+            Vector2 dirWorldHit = ctx.TransformMoveInputToWorldPlanar(dirInputHit);
+            float offset = config.GetHitboxOffsetForDirection(dirInputHit);
+            ctx.attackHitbox.EnableHitbox(config.attackDamage, dirWorldHit, offset, config.knockbackForce);
         }
     }
 

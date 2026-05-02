@@ -14,20 +14,22 @@ public class PlayerDashState : StateBase<PlayerController>
         ctx.dashFinished = false;
         ctx.IsInvincible = true;
 
-        Vector2 dir = ctx.Moveinput.sqrMagnitude > 0.01f
+        Vector2 dirInput = ctx.Moveinput.sqrMagnitude > 0.01f
             ? ctx.Moveinput.normalized
             : ctx.LastMoveDiraction.normalized;
 
+        Vector2 dirWorld = ctx.TransformMoveInputToWorldPlanar(dirInput);
+
         float speed = ctx.dashDistance / Mathf.Max(0.01f, ctx.dashDuration);
-        ctx.rb.linearVelocity = dir * speed;
+        ctx.rb.linearVelocity = dirWorld * speed;
 
         _durationTimer = ctx.dashDuration;
 
         if (ctx.animator != null)
         {
             ctx.animator.SetBool("IsDashing", true);
-            ctx.animator.SetFloat("MoveX", dir.x);
-            ctx.animator.SetFloat("MoveY", dir.y);
+            ctx.animator.SetFloat("MoveX", dirInput.x);
+            ctx.animator.SetFloat("MoveY", dirInput.y);
         }
     }
 

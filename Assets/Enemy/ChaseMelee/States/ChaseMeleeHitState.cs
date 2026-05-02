@@ -10,6 +10,13 @@ public class ChaseMeleeHitState : StateBase<ChaseMeleeEnemyController>
         ctx.StopMovingPublic();
         ctx.ConsumePendingHit();
         ctx.PlayHitAnimTrigger();
+        ctx.SetStunnedAnim(true);
+    }
+
+    public override void Exit(ChaseMeleeEnemyController ctx)
+    {
+        ctx.SetStunnedAnim(false);
+        ctx.NextRecoveryShouldRefillPosture = true;
     }
 
     public override void Update(ChaseMeleeEnemyController ctx, float dt)

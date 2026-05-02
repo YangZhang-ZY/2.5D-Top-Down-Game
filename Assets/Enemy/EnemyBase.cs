@@ -269,8 +269,12 @@ public abstract class EnemyBase : MonoBehaviour
         hasLastDamageInfo = true;
         if (IsDamageFromPlayer(info))
             playerAggroActive = true;
-        ApplyKnockbackFromLastDamage();
+        if (ShouldApplyKnockbackFromDamage(info))
+            ApplyKnockbackFromLastDamage();
     }
+
+    /// <summary>默认每次受击都击退；有架势时可重写为仅破防时击退。</summary>
+    protected virtual bool ShouldApplyKnockbackFromDamage(DamageInfo info) => true;
 
     /// <summary>
     /// Health 死亡事件回调。

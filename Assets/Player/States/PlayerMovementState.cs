@@ -18,7 +18,8 @@ public class PlayerMovementState : StateBase<PlayerController>
         {
             MoveInput = MoveInput.normalized;
         }
-        ctx.rb.linearVelocity = MoveInput * ctx.MoveSpeed;
+        Vector2 worldDir = ctx.TransformMoveInputToWorldPlanar(MoveInput);
+        ctx.rb.linearVelocity = worldDir * ctx.MoveSpeed;
         if (MoveInput.sqrMagnitude > 0.01f)
         {
             ctx.LastMoveDiraction = ctx.Moveinput.normalized;
