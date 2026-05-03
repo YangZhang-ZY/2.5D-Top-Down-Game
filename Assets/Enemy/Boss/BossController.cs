@@ -413,15 +413,11 @@ public class BossController : StatefulEnemyControllerBase<BossController>
         float d2 = isAttack1 ? attack1Hit2Damage : attack2Hit2Damage;
         float dmg = secondSegment ? (d2 > 0f ? d2 : d1) : d1;
 
-        float k1 = isAttack1 ? attack1Knockback : attack2Knockback;
-        float k2 = isAttack1 ? attack1Hit2Knockback : attack2Hit2Knockback;
-        float kb = secondSegment ? (k2 > 0f ? k2 : k1) : k1;
-
         float disp = isAttack1 ? attack1Displacement : attack2Displacement;
 
         CancelPendingHitboxDisableRoutine();
 
-        attackHitbox.EnableHitbox(dmg, hitDir, boxDist, kb);
+        attackHitbox.EnableHitbox(dmg, hitDir, boxDist, 0f);
         ApplyAttackDisplacement(hitDir, disp);
         _hitboxDisableRoutine = StartCoroutine(DisableHitboxAfterActiveDuration());
     }

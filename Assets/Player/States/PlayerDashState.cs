@@ -13,6 +13,9 @@ public class PlayerDashState : StateBase<PlayerController>
     {
         ctx.dashFinished = false;
         ctx.IsInvincible = true;
+        var hp = ctx.GetComponent<Health>();
+        if (hp != null)
+            hp.SetIgnoreDamage(true);
 
         Vector2 dirInput = ctx.Moveinput.sqrMagnitude > 0.01f
             ? ctx.Moveinput.normalized
@@ -45,6 +48,9 @@ public class PlayerDashState : StateBase<PlayerController>
         ctx.rb.linearVelocity = Vector2.zero;
         ctx.SetDashCooldown(ctx.dashCooldown);
         ctx.IsInvincible = false;
+        var hp = ctx.GetComponent<Health>();
+        if (hp != null)
+            hp.SetIgnoreDamage(false);
 
         if (ctx.animator != null)
             ctx.animator.SetBool("IsDashing", false);

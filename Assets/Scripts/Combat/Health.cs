@@ -83,6 +83,14 @@ public class Health : MonoBehaviour, IDamageable
         ignoreDamage = ignore;
     }
 
+    /// <summary>
+    /// 将受击无敌计时设为指定秒数（会覆盖当前剩余时间）。用于受击硬直结束后再给一段无敌。
+    /// </summary>
+    public void SetInvincibleTimer(float seconds)
+    {
+        _invincibleTimer = seconds > 0f ? seconds : 0f;
+    }
+
     /// <summary>Restores HP (capped at max). Use for boss heal / pickups.</summary>
     public void Heal(int amount)
     {

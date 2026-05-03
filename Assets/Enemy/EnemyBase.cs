@@ -36,6 +36,9 @@ public abstract class EnemyBase : MonoBehaviour
     [Tooltip("Primary Target 为空时，按此 Tag 查找（需在 Tag Manager 中创建）。若场景有 BaseTarget 组件则优先用其单例。")]
     public string autoFindBaseTag = "Base";
 
+    [Tooltip("勾选后：移动与追击将忽略 Primary Target，只在玩家进入追击范围或已激怒时追玩家。适合危险区巡逻怪。")]
+    public bool ignorePrimaryTargetForMovement;
+
     [Tooltip("玩家进入此距离内会优先追击玩家（挑衅）")]
     public float playerProvokeRange = 2.5f;
 
@@ -394,7 +397,7 @@ public abstract class EnemyBase : MonoBehaviour
     {
         if (playerAggroActive && player != null)
             return player;
-        if (primaryTarget != null)
+        if (!ignorePrimaryTargetForMovement && primaryTarget != null)
             return primaryTarget;
         if (player != null)
         {
@@ -430,7 +433,7 @@ public abstract class EnemyBase : MonoBehaviour
     {
         var t = GetMoveTarget();
         if (t == null) return false;
-        if (primaryTarget != null && t == primaryTarget) return true;
+        if (!ignorePrimaryTargetForMovement && primaryTarget != null && t == primaryTarget) return true;
         return (t.position - transform.position).sqrMagnitude <= chaseRange * chaseRange;
     }
 

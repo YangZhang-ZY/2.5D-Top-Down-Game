@@ -129,7 +129,7 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""qe"",
+                    ""name"": ""q"",
                     ""type"": ""Button"",
                     ""id"": ""0eec1814-88af-4527-9d96-cdb441b05edd"",
                     ""expectedControlType"": """",
@@ -138,7 +138,7 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""r"",
+                    ""name"": ""e"",
                     ""type"": ""Button"",
                     ""id"": ""ea83bac2-8aef-4202-963e-419840db26ab"",
                     ""expectedControlType"": """",
@@ -228,7 +228,7 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""9a7d3416-d0b5-4db1-a7b8-ce22d132145c"",
-                    ""path"": ""<Keyboard>/e"",
+                    ""path"": ""<Keyboard>/f"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard"",
@@ -243,18 +243,18 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard"",
-                    ""action"": ""qe"",
+                    ""action"": ""q"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
                     ""id"": ""3861debf-be5d-49f3-91c7-41dc0b28fad2"",
-                    ""path"": ""<Keyboard>/r"",
+                    ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""r"",
+                    ""action"": ""e"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -286,8 +286,8 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
         m_Player_Attack = m_Player.FindAction("Attack", throwIfNotFound: true);
         m_Player_Dash = m_Player.FindAction("Dash", throwIfNotFound: true);
         m_Player_Interact = m_Player.FindAction("Interact", throwIfNotFound: true);
-        m_Player_qe = m_Player.FindAction("qe", throwIfNotFound: true);
-        m_Player_r = m_Player.FindAction("r", throwIfNotFound: true);
+        m_Player_q = m_Player.FindAction("q", throwIfNotFound: true);
+        m_Player_e = m_Player.FindAction("e", throwIfNotFound: true);
     }
 
     ~@PlayerInputSet()
@@ -372,8 +372,8 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Attack;
     private readonly InputAction m_Player_Dash;
     private readonly InputAction m_Player_Interact;
-    private readonly InputAction m_Player_qe;
-    private readonly InputAction m_Player_r;
+    private readonly InputAction m_Player_q;
+    private readonly InputAction m_Player_e;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -402,13 +402,13 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Interact => m_Wrapper.m_Player_Interact;
         /// <summary>
-        /// Provides access to the underlying input action "Player/qe".
+        /// Provides access to the underlying input action "Player/q".
         /// </summary>
-        public InputAction @qe => m_Wrapper.m_Player_qe;
+        public InputAction @q => m_Wrapper.m_Player_q;
         /// <summary>
-        /// Provides access to the underlying input action "Player/r".
+        /// Provides access to the underlying input action "Player/e".
         /// </summary>
-        public InputAction @r => m_Wrapper.m_Player_r;
+        public InputAction @e => m_Wrapper.m_Player_e;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -447,12 +447,12 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
-            @qe.started += instance.OnQe;
-            @qe.performed += instance.OnQe;
-            @qe.canceled += instance.OnQe;
-            @r.started += instance.OnR;
-            @r.performed += instance.OnR;
-            @r.canceled += instance.OnR;
+            @q.started += instance.OnQ;
+            @q.performed += instance.OnQ;
+            @q.canceled += instance.OnQ;
+            @e.started += instance.OnE;
+            @e.performed += instance.OnE;
+            @e.canceled += instance.OnE;
         }
 
         /// <summary>
@@ -476,12 +476,12 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
-            @qe.started -= instance.OnQe;
-            @qe.performed -= instance.OnQe;
-            @qe.canceled -= instance.OnQe;
-            @r.started -= instance.OnR;
-            @r.performed -= instance.OnR;
-            @r.canceled -= instance.OnR;
+            @q.started -= instance.OnQ;
+            @q.performed -= instance.OnQ;
+            @q.canceled -= instance.OnQ;
+            @e.started -= instance.OnE;
+            @e.performed -= instance.OnE;
+            @e.canceled -= instance.OnE;
         }
 
         /// <summary>
@@ -564,18 +564,18 @@ public partial class @PlayerInputSet: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnInteract(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "qe" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "q" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnQe(InputAction.CallbackContext context);
+        void OnQ(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "r" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "e" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnR(InputAction.CallbackContext context);
+        void OnE(InputAction.CallbackContext context);
     }
 }

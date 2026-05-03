@@ -15,6 +15,8 @@ public class PlayerAttackState : StateBase<PlayerController>
         ctx.rb.linearVelocity = Vector2.zero;
         ctx.StartAttackCooldown();
 
+        ctx.TryConsumeChargedExplosionOnAttack();
+
         StartStep(ctx, ctx.attackSequenceIndex);
     }
 
@@ -58,7 +60,7 @@ public class PlayerAttackState : StateBase<PlayerController>
             Vector2 dirInputHit = ctx.LastMoveDiraction.sqrMagnitude > 0.01f ? ctx.LastMoveDiraction.normalized : Vector2.down;
             Vector2 dirWorldHit = ctx.TransformMoveInputToWorldPlanar(dirInputHit);
             float offset = config.GetHitboxOffsetForDirection(dirInputHit);
-            ctx.attackHitbox.EnableHitbox(config.attackDamage, dirWorldHit, offset, config.knockbackForce);
+            ctx.attackHitbox.EnableHitbox(config.attackDamage, dirWorldHit, offset, 0f);
         }
     }
 

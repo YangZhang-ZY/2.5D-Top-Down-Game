@@ -227,8 +227,18 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     {
         if (animator == null) return;
         animator.SetFloat(animParamSpeed, rb != null ? rb.linearVelocity.magnitude : 0f);
-        if (rb != null && rb.linearVelocity.sqrMagnitude > 0.01f)
+
+        var cur = _stateMachine?.CurrentState;
+        bool lockFaceToManual = cur == _attackState || cur == _recoveryState;
+
+        if (!lockFaceToManual
+            && rb != null
+            && rb.linearVelocity.sqrMagnitude > 0.01f
+            && !IsKnockbackPausingMovement)
+        {
             _faceX = rb.linearVelocity.x >= 0 ? 1f : -1f;
+        }
+
         if (!string.IsNullOrEmpty(animParamFaceX))
             animator.SetFloat(animParamFaceX, _faceX);
     }
@@ -250,7 +260,7 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
         Vector2 dir = ((Vector2)tgt.position - (Vector2)transform.position).normalized;
         if (dir.sqrMagnitude < 0.01f) dir = Vector2.down;
         UpdateFacing(dir);
-        attackHitbox.EnableHitbox(attackDamage, dir, attackHitboxOffset, attackKnockbackForce);
+        attackHitbox.EnableHitbox(attackDamage, dir, attackHitboxOffset, 0f);
         ApplyAttackDisplacement(dir, attackDisplacement);
         StartCoroutine(DisableHitboxAfterDuration());
     }
@@ -269,8 +279,12 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
 
     public void ApplyAttackDisplacement(Vector2 direction, float distance)
     {
-        if (rb == null || distance <= 0f) return;
+        if (distance <= 0f) return;
         if (direction.sqrMagnitude < 0.01f) return;
-        transform.position += (Vector3)(direction.normalized * distance);
+        Vector2 delta = direction.normalized * distance;
+        if (rb != null)
+            rb.MovePosition(rb.position + delta);
+        else
+            transform.position += (Vector3)delta;
     }
 }

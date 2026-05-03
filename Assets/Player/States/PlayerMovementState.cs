@@ -12,7 +12,9 @@ public class PlayerMovementState : StateBase<PlayerController>
 
     public override void Update(PlayerController ctx, float dt)
     {
-        
+        if (PlayerInputBlocker.IsBlocked)
+            return;
+
         Vector2 MoveInput = ctx.Moveinput;
         if (MoveInput.sqrMagnitude > 0.01f)
         {

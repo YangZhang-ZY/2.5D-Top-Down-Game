@@ -77,6 +77,10 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
     [Tooltip("攻击/格挡结束后停留时间最大值（秒）")]
     public float stayDurationMax = 2f;
 
+    [Header("目标（危险区巡逻）")]
+    [Tooltip("开启后：不追 Primary Target/基地，只在 chaseRange 内发现玩家、或走进 playerProvokeRange、或被打后追击玩家。")]
+    [SerializeField] bool patrolOnlyEngagePlayer = true;
+
     [Header("Warrior 巡逻")]
     [Tooltip("巡逻范围半径（以出生点为圆心，在此范围内随机选点）")]
     public float patrolRange = 5f;
@@ -156,6 +160,8 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
     protected override void Awake()
     {
         base.Awake();
+        if (patrolOnlyEngagePlayer)
+            ignorePrimaryTargetForMovement = true;
         _posture = GetComponent<CombatPosture>();
         if (attackHitbox != null && attackHitbox.owner == null)
             attackHitbox.owner = gameObject;
@@ -375,7 +381,7 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
         if (dir.sqrMagnitude < 0.01f) dir = Vector2.down;
 
         float damage = index == 1 ? attackDamage1 : attackDamage2;
-        attackHitbox.EnableHitbox(damage, dir, attackHitboxOffset, attackKnockbackForce);
+        attackHitbox.EnableHitbox(damage, dir, attackHitboxOffset, 0f);
     }
 
     /// <summary>关闭攻击 Hitbox。可由 Animation Event 调用。</summary>

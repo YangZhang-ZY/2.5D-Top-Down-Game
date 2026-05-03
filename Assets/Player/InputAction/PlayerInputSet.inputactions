@@ -43,7 +43,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "qe",
+                    "name": "q",
                     "type": "Button",
                     "id": "0eec1814-88af-4527-9d96-cdb441b05edd",
                     "expectedControlType": "",
@@ -52,7 +52,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "r",
+                    "name": "e",
                     "type": "Button",
                     "id": "ea83bac2-8aef-4202-963e-419840db26ab",
                     "expectedControlType": "",
@@ -142,7 +142,7 @@
                 {
                     "name": "",
                     "id": "9a7d3416-d0b5-4db1-a7b8-ce22d132145c",
-                    "path": "<Keyboard>/e",
+                    "path": "<Keyboard>/f",
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard",
@@ -157,18 +157,18 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard",
-                    "action": "qe",
+                    "action": "q",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
                     "name": "",
                     "id": "3861debf-be5d-49f3-91c7-41dc0b28fad2",
-                    "path": "<Keyboard>/r",
+                    "path": "<Keyboard>/e",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "r",
+                    "action": "e",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
