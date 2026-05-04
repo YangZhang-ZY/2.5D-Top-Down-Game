@@ -187,7 +187,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
   dropPrefab: {fileID: 3851728680971676993, guid: c3d4e5f6789012345678abcdef012345, type: 3}
-  dropCount: 3
+  dropCountMin: 3
+  dropCountMax: 3
   spawnOffset: {x: 0, y: -1.63}
   spawnSpread: 0.2
   popOnSpawn: 1

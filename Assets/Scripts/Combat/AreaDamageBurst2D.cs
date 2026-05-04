@@ -13,6 +13,9 @@ public class AreaDamageBurst2D : MonoBehaviour
     [Tooltip("几秒后销毁整个物体（粒子可设得略长）")]
     public float destroyAfterSeconds = 2f;
 
+    [Tooltip("为 true 时仅伤害：从自身到根节点任一层级带了 Enemy 标签的物体（格挡大爆炸由 PlayerController 自动开启）")]
+    public bool onlyDamageEnemyTag;
+
     /// <summary>由 <see cref="PlayerController"/> 在生成后赋值，用于排除自伤</summary>
     public GameObject damageSource;
 
@@ -38,7 +41,22 @@ public class AreaDamageBurst2D : MonoBehaviour
             if (host != null && (host.gameObject == src || host.transform.IsChildOf(src.transform)))
                 continue;
 
+            if (onlyDamageEnemyTag && !HierarchyHasEnemyTag(host.gameObject))
+                continue;
+
             dmg.TakeDamage(DamageInfo.Create(damage, src));
         }
+    }
+
+    static bool HierarchyHasEnemyTag(GameObject go)
+    {
+        if (go == null) return false;
+        for (Transform t = go.transform; t != null; t = t.parent)
+        {
+            if (t.gameObject.CompareTag("Enemy"))
+                return true;
+        }
+
+        return false;
     }
 }

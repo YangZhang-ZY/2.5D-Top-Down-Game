@@ -37,6 +37,9 @@ public class Health : MonoBehaviour, IDamageable
     [Tooltip("Fired when HP reaches zero.")]
     public UnityEvent OnDeath;
 
+    [Tooltip("Fired after Heal when current HP actually increased.")]
+    public UnityEvent OnHealed;
+
     private float _invincibleTimer;
 
     /// <summary>Current HP.</summary>
@@ -95,7 +98,10 @@ public class Health : MonoBehaviour, IDamageable
     public void Heal(int amount)
     {
         if (amount <= 0 || IsDead) return;
+        int before = _currentHP;
         _currentHP = Mathf.Min(maxHP, _currentHP + amount);
+        if (_currentHP > before)
+            OnHealed?.Invoke();
     }
 
     /// <summary>Restores HP to max (respawn, heal).</summary>

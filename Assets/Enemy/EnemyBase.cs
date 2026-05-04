@@ -8,7 +8,7 @@ using UnityEngine;
 /// - 自动查找玩家（Tag Player）
 /// - 攻击冷却管理
 /// - 受击时：播放 Hit 动画、音效、闪白（可扩展）、击退
-/// - 死亡时：停止移动、播放死亡动画、关闭碰撞
+/// - 死亡时：停止移动、播放死亡动画、关闭碰撞，再在 <see cref="destroyDelayAfterDeath"/> 秒后销毁
 ///
 /// 【依赖组件】
 /// - 同物体上必须有：Health、Rigidbody2D
@@ -49,8 +49,14 @@ public abstract class EnemyBase : MonoBehaviour
     [Tooltip("玩家进入此范围后开始追击（单位：世界距离）；仅针对玩家目标时有效")]
     public float chaseRange = 8f;
 
+    [Tooltip(">0 时：以玩家为移动/脱战目标时用 max(chaseRange, 本值) 作为距离上限。Boss 可用较大值避免开场玩家在 chase 外时 GetMoveTarget 一直为 null。")]
+    public float maxPlayerEngageRange = 0f;
+
     [Tooltip("进入此范围后可以攻击（近战/远程子类可自定义逻辑）")]
     public float attackRange = 1.5f;
+
+    [Tooltip("追击时「走到多近算停」：>0 时与 attackRange 分开。远程 Boss 可把 attackRange 设很大、此处设较小，否则会一直认为已在攻击距离内而不走路。")]
+    public float moveStopDistance = 0f;
 
     [Tooltip("两次攻击之间的冷却时间（秒）")]
     public float attackCooldown = 1.0f;
@@ -71,6 +77,11 @@ public abstract class EnemyBase : MonoBehaviour
 
     [Tooltip("受击音效（不填则不播放）")]
     public AudioClip hitSfx;
+
+    [Header("死亡")]
+    [Tooltip("死亡后延迟多少秒销毁本物体（含 Boss）；给死亡动画留出时间。0 表示尽快销毁（约下一帧末）。")]
+    [Min(0f)]
+    public float destroyDelayAfterDeath = 2f;
 
     [Header("动画参数名（需与 Animator 中的参数一致）")]
     [Tooltip("Float 参数，用于 Idle/Run 切换，通常为移动速度")]
@@ -297,6 +308,8 @@ public abstract class EnemyBase : MonoBehaviour
         // 关闭碰撞，避免尸体挡路
         var col = GetComponent<Collider2D>();
         if (col != null) col.enabled = false;
+
+        Destroy(gameObject, Mathf.Max(0f, destroyDelayAfterDeath));
     }
 
     /// <summary>
@@ -392,8 +405,11 @@ public abstract class EnemyBase : MonoBehaviour
         ApplyChaseVelocityFromDirection(dir);
     }
 
+    /// <summary>玩家作为追击目标时的距离上限（与脱战一致）。</summary>
+    protected float PlayerLeashRadius => maxPlayerEngageRange > 0f ? Mathf.Max(chaseRange, maxPlayerEngageRange) : chaseRange;
+
     /// <summary>当前 AI 移动目标：优先仇恨玩家，否则首要目标（水晶），否则追击范围内的玩家。</summary>
-    public Transform GetMoveTarget()
+    public virtual Transform GetMoveTarget()
     {
         if (playerAggroActive && player != null)
             return player;
@@ -402,7 +418,7 @@ public abstract class EnemyBase : MonoBehaviour
         if (player != null)
         {
             float _;
-            if (IsPlayerInRange(chaseRange, out _))
+            if (IsPlayerInRange(PlayerLeashRadius, out _))
                 return player;
         }
         return null;
@@ -426,15 +442,32 @@ public abstract class EnemyBase : MonoBehaviour
         return sqr <= attackRange * attackRange;
     }
 
+    /// <summary>用于 Idle/Move 切换：<see cref="moveStopDistance"/> 未设时用 <see cref="attackRange"/>。</summary>
+    public float GetEffectiveMoveStopDistance()
+    {
+        return moveStopDistance > 1e-4f ? moveStopDistance : attackRange;
+    }
+
+    /// <summary>距离当前移动目标是否仍大于「停步距离」（需要继续追击）。</summary>
+    public bool IsCurrentTargetBeyondMoveStopDistance()
+    {
+        var t = GetMoveTarget();
+        if (t == null) return false;
+        float stop = GetEffectiveMoveStopDistance();
+        float sqr = (t.position - transform.position).sqrMagnitude;
+        return sqr > stop * stop;
+    }
+
     /// <summary>
     /// 用于 Stay→Chase 等：首要目标时始终为 true；玩家目标时在追击半径内。
     /// </summary>
-    public bool IsCurrentTargetInChaseRange()
+    public virtual bool IsCurrentTargetInChaseRange()
     {
         var t = GetMoveTarget();
         if (t == null) return false;
         if (!ignorePrimaryTargetForMovement && primaryTarget != null && t == primaryTarget) return true;
-        return (t.position - transform.position).sqrMagnitude <= chaseRange * chaseRange;
+        float r = t == player ? PlayerLeashRadius : chaseRange;
+        return (t.position - transform.position).sqrMagnitude <= r * r;
     }
 
     /// <summary>每帧更新：挑衅距离、脱战（子类在 Update 中调用）</summary>
@@ -444,11 +477,11 @@ public abstract class EnemyBase : MonoBehaviour
         float sqr = (player.position - transform.position).sqrMagnitude;
         if (sqr <= playerProvokeRange * playerProvokeRange)
             playerAggroActive = true;
-        else if (playerAggroActive && sqr > chaseRange * chaseRange)
+        else if (playerAggroActive && sqr > PlayerLeashRadius * PlayerLeashRadius)
             playerAggroActive = false;
     }
 
-    static bool IsDamageFromPlayer(DamageInfo info)
+    protected static bool IsDamageFromPlayer(DamageInfo info)
     {
         if (info.source == null) return false;
         if (info.source.CompareTag("Player")) return true;

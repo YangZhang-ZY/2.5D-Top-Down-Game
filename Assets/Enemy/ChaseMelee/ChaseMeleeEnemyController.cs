@@ -91,6 +91,47 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
             attackHitbox.owner = gameObject;
     }
 
+    /// <summary>
+    /// 未激怒时：优先走向离自己最近的 <see cref="EnemyPrimitiveAttackTarget"/>（墙/塔/水晶等），否则再沿用首要目标与玩家追击逻辑。
+    /// </summary>
+    public override Transform GetMoveTarget()
+    {
+        if (playerAggroActive && player != null)
+            return player;
+
+        if (!ignorePrimaryTargetForMovement)
+        {
+            Transform primitiveAim = EnemyPrimitiveAttackTarget.GetNearestAimTransform(transform.position);
+            if (primitiveAim != null)
+                return primitiveAim;
+            if (primaryTarget != null)
+                return primaryTarget;
+        }
+
+        if (player != null)
+        {
+            float _;
+            if (IsPlayerInRange(PlayerLeashRadius, out _))
+                return player;
+        }
+
+        return null;
+    }
+
+    public override bool IsCurrentTargetInChaseRange()
+    {
+        var t = GetMoveTarget();
+        if (t == null) return false;
+        if (!ignorePrimaryTargetForMovement)
+        {
+            if (primaryTarget != null && t == primaryTarget) return true;
+            if (EnemyPrimitiveAttackTarget.FindForTransform(t) != null) return true;
+        }
+
+        float r = t == player ? PlayerLeashRadius : chaseRange;
+        return (t.position - transform.position).sqrMagnitude <= r * r;
+    }
+
     /// <summary>仅当从 <see cref="ChaseMeleeHitState"/> 进入下一次 Recovery 时在 Exit 补满架势。</summary>
     public bool NextRecoveryShouldRefillPosture { get; set; }
 

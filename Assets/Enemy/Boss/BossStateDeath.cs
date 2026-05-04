@@ -5,13 +5,13 @@ public sealed class BossStateDeath : StateBase<BossController>
 {
     public override void Enter(BossController ctx)
     {
+        ctx.CleanupBossHeal();
         ctx.CancelPendingHitboxDisableRoutine();
         ctx.StopMovingPublic();
         ctx.SetAttack1Anim(false);
         ctx.SetAttack2Anim(false);
         ctx.SetHealAnim(false);
         ctx.SetRecoveryAnim(false);
-        ctx.SetStunnedAnim(false);
         ctx.DisableAttackHitboxSafe();
 
         if (ctx.Animator != null && !string.IsNullOrEmpty(ctx.animParamIsDead))

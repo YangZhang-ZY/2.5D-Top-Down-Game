@@ -36,17 +36,17 @@ AnimationClip:
       value: {fileID: -5279385186060196887, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
     - time: 1.25
       value: {fileID: 7772051465864762453, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
-    - time: 1.625
-      value: {fileID: -6557382607685467586, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
-    - time: 1.75
-      value: {fileID: 8879609638579261112, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
-    - time: 1.875
-      value: {fileID: -7809640203663169966, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
-    - time: 2
-      value: {fileID: 5696988961040161489, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
     - time: 2.125
-      value: {fileID: 4509334319334553636, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
+      value: {fileID: -6557382607685467586, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
     - time: 2.25
+      value: {fileID: 8879609638579261112, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
+    - time: 2.375
+      value: {fileID: -7809640203663169966, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
+    - time: 2.5
+      value: {fileID: 5696988961040161489, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
+    - time: 2.625
+      value: {fileID: 4509334319334553636, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
+    - time: 2.75
       value: {fileID: 8355741976033028811, guid: 47bbc11f7c7ac8a4bba30256530f7ab5, type: 3}
     attribute: m_Sprite
     path: 
@@ -89,7 +89,7 @@ AnimationClip:
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 2.375
+    m_StopTime: 2.875
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
@@ -116,14 +116,14 @@ AnimationClip:
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 1.625
+  - time: 2.125
     functionName: OnBossAttack1Hit2
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 2.25
+  - time: 2.75
     functionName: OnBossAttackEnd
     data: 
     objectReferenceParameter: {fileID: 0}

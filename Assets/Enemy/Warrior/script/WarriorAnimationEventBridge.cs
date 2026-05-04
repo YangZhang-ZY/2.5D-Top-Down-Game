@@ -31,4 +31,10 @@ public class WarriorAnimationEventBridge : MonoBehaviour
     {
         _warrior?.OnAttack2End();
     }
+
+    /// <summary>动画事件：连击后摇 Recovery 提前结束（可省略，仅用 recoveryStateDuration）</summary>
+    public void OnWarriorRecoveryEnd()
+    {
+        _warrior?.OnWarriorRecoveryEnd();
+    }
 }

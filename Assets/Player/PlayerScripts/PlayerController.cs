@@ -189,10 +189,12 @@ public class PlayerController : MonoBehaviour
     [Tooltip("格挡时 Animator Bool（如 IsBlocking / Shield）；空则不调")]
     public string blockShieldAnimBoolParam = "IsBlocking";
     [Header("格挡成功：下一次攻击的大爆炸")]
-    [Tooltip("预制体可纯特效；若要伤害请挂 AreaDamageBurst2D")]
+    [Tooltip("预制体可纯特效；若要伤害请挂 AreaDamageBurst2D（仅对带 Enemy 标签的目标造成伤害，由脚本在生成时开启）")]
     public GameObject blockExplosionPrefab;
-    [Tooltip("在玩家周围多少米内找最近的带 Health 的敌人作为爆炸中心；没有则炸在玩家位置")]
-    public float blockExplosionSnapRadius = 10f;
+    [Tooltip("爆炸生成点相对玩家位置的偏移；勾选下面一项时为本地 XY（随物体旋转）")]
+    public Vector2 blockExplosionSpawnOffset;
+    [Tooltip("为 true 时偏移按本 Transform 的旋转映射到世界方向（例如本地 +X 朝角色面向）")]
+    public bool blockExplosionSpawnOffsetLocal;
 
     public bool wantBlock { get; private set; }
     public bool blockFinished { get; set; }
@@ -339,34 +341,6 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
-    /// <summary>在 <see cref="blockExplosionSnapRadius"/> 内最近敌人根位置；否则玩家位置。</summary>
-    public Vector2 GetChargedExplosionSpawnPosition()
-    {
-        Vector2 origin = rb != null ? rb.position : (Vector2)transform.position;
-        const int MaxHits = 48;
-        var results = new Collider2D[MaxHits];
-        int n = Physics2D.OverlapCircleNonAlloc(origin, blockExplosionSnapRadius, results);
-        float bestSq = float.MaxValue;
-        Vector2 best = origin;
-        bool found = false;
-        for (int i = 0; i < n; i++)
-        {
-            var col = results[i];
-            if (col == null) continue;
-            var hp = col.GetComponentInParent<Health>();
-            if (hp == null || hp.IsDead || hp.gameObject == gameObject) continue;
-            if (!IsEnemyDamageSource(hp.gameObject)) continue;
-            float sq = ((Vector2)hp.transform.position - origin).sqrMagnitude;
-            if (sq < bestSq)
-            {
-                bestSq = sq;
-                best = hp.transform.position;
-                found = true;
-            }
-        }
-        return found ? best : origin;
-    }
-
     /// <summary>在攻击开始时调用：若格挡充能存在则生成爆炸并清除标记。</summary>
     public void TryConsumeChargedExplosionOnAttack()
     {
@@ -385,10 +359,20 @@ public class PlayerController : MonoBehaviour
         }
 
         HasChargedExplosionForNextAttack = false;
-        Vector2 pos = GetChargedExplosionSpawnPosition();
+        Vector2 pos = rb != null ? rb.position : (Vector2)transform.position;
+        if (blockExplosionSpawnOffset.sqrMagnitude > 1e-8f)
+        {
+            if (blockExplosionSpawnOffsetLocal)
+                pos += (Vector2)transform.TransformVector(new Vector3(blockExplosionSpawnOffset.x, blockExplosionSpawnOffset.y, 0f));
+            else
+                pos += blockExplosionSpawnOffset;
+        }
         var go = Instantiate(blockExplosionPrefab, pos, Quaternion.identity);
-        if (go.TryGetComponent<AreaDamageBurst2D>(out var _burst))
-            _burst.damageSource = gameObject;
+        if (go.TryGetComponent<AreaDamageBurst2D>(out var burst))
+        {
+            burst.damageSource = gameObject;
+            burst.onlyDamageEnemyTag = true;
+        }
     }
 
     /// <summary>受击状态结束时调用：从这一刻起刷新无敌计时（默认 0.5s，见 postHurtInvincibilityDuration）。</summary>

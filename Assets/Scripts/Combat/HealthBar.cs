@@ -46,6 +46,7 @@ public class HealthBar : MonoBehaviour
             Refresh();
             _damageFillAmount = fillImage.fillAmount;
             health.OnDamaged.AddListener(OnHealthDamaged);
+            health.OnHealed.AddListener(OnHealthHealed);
             health.OnDeath.AddListener(OnHealthDeath);
         }
     }
@@ -70,6 +71,7 @@ public class HealthBar : MonoBehaviour
         if (health != null)
         {
             health.OnDamaged.RemoveListener(OnHealthDamaged);
+            health.OnHealed.RemoveListener(OnHealthHealed);
             health.OnDeath.RemoveListener(OnHealthDeath);
         }
     }
@@ -81,6 +83,8 @@ public class HealthBar : MonoBehaviour
         if (damageFillImage != null)
             _damageFillAmount = prevFill;
     }
+
+    void OnHealthHealed() => Refresh();
 
     private void OnHealthDeath() => gameObject.SetActive(false);
 

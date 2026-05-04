@@ -12,7 +12,8 @@ using StateMachine;
 /// Chase → Attack1（玩家在攻击范围内，WarriorController 决策随机攻击）
 /// Chase → Block（玩家在攻击范围内，WarriorController 决策随机格挡）
 /// Attack1 → Attack2（第一段结束，由动画事件 OnAttack1End 触发）
-/// Attack2 → Stay（第二段结束，由动画事件 OnAttack2End 触发）
+/// Attack2 → Recovery（第二段结束，由动画事件 OnAttack2End 触发）
+/// Recovery → Stay（后摇计时结束或动画事件 OnWarriorRecoveryEnd）
 /// Block → Stay（格挡结束）
 /// Stay → Patrol 或 Chase（停留 1~2 秒后）
 /// 任意状态 → Death（HP 归零）
@@ -22,6 +23,7 @@ using StateMachine;
 /// - FaceX (float)：面向，-1=左，1=右，用于双向动画
 /// - Attack1 (bool)：第一段攻击
 /// - Attack2 (bool)：第二段攻击
+/// - Recovery (bool)：连击结束后后摇（与 ChaseMelee / Boss 一致，参数名见 animParamRecovery）
 /// - IsBlocking (bool)：格挡
 /// - IsDead (bool)：死亡
 /// - Hit (Trigger)：受击
@@ -58,6 +60,15 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
 
     [Tooltip("第二段攻击位移距离")]
     public float attackDisplacement2 = 0.4f;
+
+    [Space(8)]
+    [Header("Warrior 连击后摇（第二段 Attack2 结束后）")]
+    [Tooltip("后摇状态最短持续秒数（未发 OnWarriorRecoveryEnd 时至少锁这么久）；可与 Recovery 动画同长")]
+    [Min(0f)]
+    public float recoveryStateDuration = 0.5f;
+
+    [Tooltip("Animator 里后摇用的 Bool 参数名，默认同 ChaseMelee：Recovery")]
+    public string animParamRecovery = "Recovery";
 
     [Header("Warrior 格挡")]
     [Tooltip("格挡持续时间（秒）")]
@@ -114,6 +125,7 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
     private WarriorChaseState _chaseState;
     private WarriorAttack1State _attack1State;
     private WarriorAttack2State _attack2State;
+    private WarriorRecoveryState _recoveryState;
     private WarriorBlockState _blockState;
     private WarriorStayState _stayState;
     private WarriorDeathState _deathState;
@@ -126,6 +138,9 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
 
     /// <summary>第二段攻击是否结束（由动画事件 OnAttack2End 设置）</summary>
     public bool attack2Finished { get; set; }
+
+    /// <summary>攻击后摇是否结束（计时或 OnWarriorRecoveryEnd）</summary>
+    public bool recoveryFinished { get; set; }
 
     /// <summary>格挡是否结束（Block 状态完成后设为 true）</summary>
     public bool blockFinished { get; set; }
@@ -176,6 +191,7 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
         _chaseState = new WarriorChaseState();
         _attack1State = new WarriorAttack1State();
         _attack2State = new WarriorAttack2State();
+        _recoveryState = new WarriorRecoveryState();
         _blockState = new WarriorBlockState();
         _stayState = new WarriorStayState();
         _deathState = new WarriorDeathState();
@@ -203,8 +219,11 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
         // Attack1 → Attack2：第一段结束
         _stateMachine.AddTransition(_attack1State, _attack2State, ctx => ctx.attack1Finished);
 
-        // Attack2 → Stay：第二段结束
-        _stateMachine.AddTransition(_attack2State, _stayState, ctx => ctx.attack2Finished);
+        // Attack2 → Recovery：第二段结束
+        _stateMachine.AddTransition(_attack2State, _recoveryState, ctx => ctx.attack2Finished);
+
+        // Recovery → Stay：后摇结束
+        _stateMachine.AddTransition(_recoveryState, _stayState, ctx => ctx.recoveryFinished);
 
         // Block → Stay：格挡结束
         _stateMachine.AddTransition(_blockState, _stayState, ctx => ctx.blockFinished);
@@ -317,6 +336,7 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
             if (s.Contains("Chase")) return "Chase";
             if (s.Contains("Attack1")) return "Attack1";
             if (s.Contains("Attack2")) return "Attack2";
+            if (s.Contains("Recovery")) return "Recovery";
             if (s.Contains("Block")) return "Block";
             if (s.Contains("Stay")) return "Stay";
             if (s.Contains("Death")) return "Death";
@@ -403,6 +423,22 @@ public class WarriorController : StatefulEnemyControllerBase<WarriorController>
     {
         if (Animator != null && !string.IsNullOrEmpty(animParamAttack2))
             Animator.SetBool(animParamAttack2, value);
+    }
+
+    /// <summary>设置 Animator Recovery（连击后摇）</summary>
+    public void SetRecoveryAnim(bool value)
+    {
+        if (Animator != null && !string.IsNullOrEmpty(animParamRecovery))
+            Animator.SetBool(animParamRecovery, value);
+    }
+
+    /// <summary>
+    /// 动画事件：可选，在 Recovery 动画提前结束时调用（片段末尾），否则用 recoveryStateDuration。
+    /// </summary>
+    public void OnWarriorRecoveryEnd()
+    {
+        if (_stateMachine == null || _stateMachine.CurrentState != _recoveryState) return;
+        recoveryFinished = true;
     }
 
     /// <summary>

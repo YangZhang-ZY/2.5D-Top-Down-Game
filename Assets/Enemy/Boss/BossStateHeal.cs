@@ -23,6 +23,7 @@ public sealed class BossStateHeal : StateBase<BossController>
 
     public override void Exit(BossController ctx)
     {
+        ctx.EndHealStateCleanup();
         ctx.SetHealAnim(false);
     }
 }

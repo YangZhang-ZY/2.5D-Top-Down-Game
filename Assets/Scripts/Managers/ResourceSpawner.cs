@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// On each day start, refills resources in three annular rings (cap per entry).
-/// Nothing spawns inside the build/safe radius; optional exclusion zones filter samples.
-/// Spawns use identity rotation so billboard sprites stay aligned with 2D colliders.
+/// 每个白天开始时（<see cref="DayNightManager.OnDayStart"/>）以及场景 <see cref="Start"/> 时，
+/// 按每条目的 <see cref="ResourceEntry.spawnPerDay"/> 在三个环带内补充实例，总数不超过 <see cref="ResourceEntry.maxCount"/>。
+/// 已采集/销毁的实例会从追踪列表移除，下一天可继续补到上限。
+/// 不在建造安全半径内采样；可选排除区。
 /// </summary>
 public class ResourceSpawner : MonoBehaviour
 {
@@ -14,11 +16,12 @@ public class ResourceSpawner : MonoBehaviour
         [Tooltip("Prefab to spawn (trees, rocks, chests, etc.).")]
         public GameObject prefab;
 
-        [Tooltip("Relative weight within the ring.")]
-        [Min(1)]
-        public int weight = 1;
+        [Tooltip("每天最多新生成的数量（直到达到 maxCount 为止）。场景第一次 Start 也算一次补充。")]
+        [Min(0)]
+        [FormerlySerializedAs("weight")]
+        public int spawnPerDay = 1;
 
-        [Tooltip("Max alive instances of this entry in the ring.")]
+        [Tooltip("该条目在本环中带存在的上限（达到后当天不再增加）。")]
         [Min(1)]
         public int maxCount = 5;
 
@@ -35,7 +38,7 @@ public class ResourceSpawner : MonoBehaviour
         [Tooltip("Outer radius (farthest distance to center).")]
         public float outerRadius = 15f;
 
-        [Tooltip("Weighted resource entries for this ring.")]
+        [Tooltip("本环内的资源条目列表。")]
         public List<ResourceEntry> entries = new();
     }
 
@@ -151,10 +154,21 @@ public class ResourceSpawner : MonoBehaviour
 
         foreach (var entry in ring.entries)
         {
-            int need = entry.maxCount - entry.alive.Count;
-            for (int i = 0; i < need; i++)
+            if (entry.prefab == null)
             {
-                if (!TrySamplePoint(ring, out Vector2 point)) continue;
+                Debug.LogWarning(
+                    "[ResourceSpawner] Ring entry has no prefab (unassigned, missing asset, or destroyed reference). Assign a project Prefab in the Inspector.",
+                    this);
+                continue;
+            }
+
+            int room = entry.maxCount - entry.alive.Count;
+            if (room <= 0) continue;
+
+            int toSpawn = Mathf.Min(entry.spawnPerDay, room);
+            for (int i = 0; i < toSpawn; i++)
+            {
+                if (!TrySamplePoint(ring, out Vector2 point)) break;
 
                 // Identity rotation keeps billboard + 2D colliders consistent.
                 var go = Instantiate(entry.prefab, point, Quaternion.identity, parent);
