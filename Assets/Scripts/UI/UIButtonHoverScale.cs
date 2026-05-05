@@ -16,7 +16,6 @@ public class UIButtonHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerE
     Button _button;
     RectTransform _rect;
     Vector3 _baseScale;
-    bool _pointerInside;
 
     public float HoverMultiplier
     {
@@ -35,7 +34,6 @@ public class UIButtonHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerE
     void OnDisable()
     {
         ResetScale();
-        _pointerInside = false;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -43,13 +41,11 @@ public class UIButtonHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerE
         if (_rect == null) return;
         if (_button != null && !_button.interactable) return;
 
-        _pointerInside = true;
         _rect.localScale = _baseScale * hoverMultiplier;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        _pointerInside = false;
         ResetScale();
     }
 

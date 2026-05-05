@@ -33,6 +33,10 @@ public class MerchantUI : MonoBehaviour
 
     [Header("References")]
     public InventoryUI inventoryUI;
+
+    [Header("Currency")]
+    [Tooltip("若赋值：以玩家背包中该道具的数量为「钱」（与 ItemData 金币道具一致）；不赋值则使用 PlayerWallet。")]
+    [SerializeField] ItemData currencyItem;
     public PlayerWallet wallet;
     public TextMeshProUGUI goldText;
 
@@ -92,7 +96,7 @@ public class MerchantUI : MonoBehaviour
 
     void OnEnable()
     {
-        if (wallet != null)
+        if (!UsesItemCurrency() && wallet != null)
             wallet.OnGoldChanged.AddListener(OnGoldChangedHandler);
         RegisterDayNightCallbacks();
         RefreshAll();
@@ -101,7 +105,7 @@ public class MerchantUI : MonoBehaviour
     void OnDisable()
     {
         ReleaseInputBlockIfNeeded();
-        if (wallet != null)
+        if (!UsesItemCurrency() && wallet != null)
             wallet.OnGoldChanged.RemoveListener(OnGoldChangedHandler);
         UnregisterDayNightCallbacks();
     }
@@ -199,8 +203,13 @@ public class MerchantUI : MonoBehaviour
     {
         EnsureInitialized();
 
-        if (goldText != null && wallet != null)
-            goldText.text = $"Gold: {wallet.Gold}";
+        if (goldText != null)
+        {
+            if (UsesItemCurrency())
+                goldText.text = $"Gold: {GetSpendableCurrency()}";
+            else if (wallet != null)
+                goldText.text = $"Gold: {wallet.Gold}";
+        }
 
         ValidateSelectedIndex();
 
@@ -273,11 +282,12 @@ public class MerchantUI : MonoBehaviour
     bool CanBuySelectedMerchantSlot()
     {
         if (_selectedMerchantSlotIndex < 0 || _selectedMerchantSlotIndex >= _merchantSlots.Count) return false;
-        if (wallet == null || inventoryUI == null || inventoryUI.inventory == null) return false;
+        if (inventoryUI == null || inventoryUI.inventory == null) return false;
+        if (!UsesItemCurrency() && wallet == null) return false;
 
         var selected = _merchantSlots[_selectedMerchantSlotIndex];
         if (selected.IsEmpty || selected.item == null || !selected.item.IsValid) return false;
-        if (wallet.Gold < selected.unitPrice) return false;
+        if (GetSpendableCurrency() < selected.unitPrice) return false;
         return inventoryUI.inventory.HasSpace(selected.item, 1);
     }
 
@@ -306,7 +316,7 @@ public class MerchantUI : MonoBehaviour
     void TrySellSelected(int requestedCount)
     {
         if (!CanTrade() || requestedCount <= 0) return;
-        if (wallet == null || inventoryUI == null || inventoryUI.inventory == null) return;
+        if ((!UsesItemCurrency() && wallet == null) || inventoryUI == null || inventoryUI.inventory == null) return;
 
         var inv = inventoryUI.inventory;
         int i = inventoryUI.SelectedSlotIndex;
@@ -322,7 +332,7 @@ public class MerchantUI : MonoBehaviour
         int removed = inv.RemoveItem(i, maxSell);
         if (removed <= 0) return;
 
-        wallet.AddGold(removed * sellUnitPrice);
+        AddCurrency(removed * sellUnitPrice);
         AddToBuybackStock(item, removed, buybackPrice);
         RefreshAll();
     }
@@ -333,12 +343,13 @@ public class MerchantUI : MonoBehaviour
         if (!CanBuySelectedMerchantSlot()) return;
 
         var selected = _merchantSlots[_selectedMerchantSlotIndex];
-        if (!wallet.TrySpend(selected.unitPrice)) return;
+        int price = selected.unitPrice;
+        if (!TrySpendCurrency(price)) return;
 
         int added = inventoryUI.inventory.AddItem(selected.item, 1);
         if (added < 1)
         {
-            wallet.AddGold(selected.unitPrice);
+            AddCurrency(price);
             return;
         }
 
@@ -470,5 +481,40 @@ public class MerchantUI : MonoBehaviour
         if (!_inputBlockRequested) return;
         PlayerInputBlocker.Release(this);
         _inputBlockRequested = false;
+    }
+
+    Inventory PlayerBag => inventoryUI != null ? inventoryUI.playerInventory : null;
+
+    bool UsesItemCurrency()
+    {
+        return currencyItem != null && currencyItem.IsValid && PlayerBag != null;
+    }
+
+    int GetSpendableCurrency()
+    {
+        if (UsesItemCurrency())
+            return PlayerBag.GetItemCount(currencyItem);
+        return wallet != null ? wallet.Gold : 0;
+    }
+
+    bool TrySpendCurrency(int amount)
+    {
+        if (amount <= 0) return true;
+        if (UsesItemCurrency())
+        {
+            if (!PlayerBag.HasCount(currencyItem, amount)) return false;
+            int removed = PlayerBag.RemoveItem(currencyItem, amount);
+            return removed >= amount;
+        }
+        return wallet != null && wallet.TrySpend(amount);
+    }
+
+    void AddCurrency(int amount)
+    {
+        if (amount <= 0) return;
+        if (UsesItemCurrency())
+            PlayerBag.AddItem(currencyItem, amount);
+        else if (wallet != null)
+            wallet.AddGold(amount);
     }
 }

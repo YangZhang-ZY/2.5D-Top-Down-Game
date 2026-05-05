@@ -1249,7 +1249,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a8cec6534b125f419cb335bb1fef73d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHP: 5
+  maxHP: 50
   _currentHP: 0
   ignoreDamage: 0
   invincibleDuration: 0
@@ -1294,9 +1294,9 @@ MonoBehaviour:
   fireRateBonusPerLevel: 0.25
   turretMaxHpBonusPerLevel: 15
   wallMaxHpBonusPerLevel: 25
-  costWoodSteps: 0400000005000000
-  costStoneSteps: 
-  costCoinSteps: 
+  costWoodSteps: 040000000500000005000000
+  costStoneSteps: 080000000a0000000c000000
+  costCoinSteps: 050000000a00000014000000
   woodItem: {fileID: 11400000, guid: 8c182b69e4c06cb4c9ac576ec0c56499, type: 2}
   stoneItem: {fileID: 11400000, guid: 43cc1fa950b9cb64cb46b01187095aae, type: 2}
   coinItem: {fileID: 11400000, guid: 3049cd379d422b944ac148d64c005032, type: 2}

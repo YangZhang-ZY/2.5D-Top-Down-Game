@@ -157,12 +157,12 @@ MonoBehaviour:
   fireRateBonusPerLevel: 0.5
   turretMaxHpBonusPerLevel: 10
   wallMaxHpBonusPerLevel: 30
-  costWoodSteps: 010000000200000003000000
+  costWoodSteps: 050000000500000005000000
   costStoneSteps: 
-  costCoinSteps: 
+  costCoinSteps: 050000000a00000014000000
   woodItem: {fileID: 11400000, guid: 8c182b69e4c06cb4c9ac576ec0c56499, type: 2}
   stoneItem: {fileID: 0}
-  coinItem: {fileID: 0}
+  coinItem: {fileID: 11400000, guid: 3049cd379d422b944ac148d64c005032, type: 2}
   interactionViaBuildSiteOnly: 1
   upgradeAction: {fileID: 1870515471571890818, guid: 3e512d448a75ac940961bfae5157f381, type: 3}
   promptRoot: {fileID: 0}

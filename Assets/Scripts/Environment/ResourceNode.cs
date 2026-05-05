@@ -22,8 +22,11 @@ public class ResourceNode : MonoBehaviour
     [Min(1)]
     public int dropCountMax = 3;
 
-    [Tooltip("Spawn position offset from this transform.")]
+    [Tooltip("相对掉落原点（本物体或 Drop Position）的水平偏移（XY）。")]
     public Vector2 spawnOffset;
+
+    [Tooltip("场景中摆好位置的空物体（可拖子物体）；掉落从该 Transform 的世界坐标起算，再叠加 Spawn Offset 与随机 spread。留空则用本物体位置。")]
+    public Transform dropPosition;
 
     [Tooltip("Random horizontal spread so multiple drops do not overlap.")]
     public float spawnSpread = 0.2f;
@@ -78,8 +81,9 @@ public class ResourceNode : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
+                Vector3 origin = dropPosition != null ? dropPosition.position : transform.position;
                 Vector2 jitter = Random.insideUnitCircle * spawnSpread;
-                Vector3 spawnPos = transform.position + (Vector3)spawnOffset + new Vector3(jitter.x, jitter.y, 0f);
+                Vector3 spawnPos = origin + (Vector3)spawnOffset + new Vector3(jitter.x, jitter.y, 0f);
                 Vector2 landJitter = Random.insideUnitCircle * popLandRadius;
                 Vector3 landPos = spawnPos + new Vector3(landJitter.x, landJitter.y, 0f);
 

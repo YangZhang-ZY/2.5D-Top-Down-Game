@@ -27,6 +27,13 @@ public class Inventory : MonoBehaviour
     [Tooltip("Raised when contents change; use for UI refresh.")]
     public UnityEvent OnInventoryChanged = new UnityEvent();
 
+    [Header("Starting loadout (optional)")]
+    [Tooltip("游戏开始时放入背包的「钱」道具（与商人 / UI 的 currency 填同一 Coin）；箱子等非玩家 Inventory 请留空。")]
+    [SerializeField] ItemData startingCurrencyItem;
+    [Tooltip("初始硬币数量（0 = 不放）。")]
+    [Min(0)]
+    [SerializeField] int startingCurrencyCount;
+
     [Header("Testing")]
     [Tooltip("Used by Test Add Item; if empty, loads from Resources.")]
     [SerializeField] private ItemData testItem;
@@ -49,7 +56,16 @@ public class Inventory : MonoBehaviour
     private void Awake()
     {
         EnsureSlotCount();
+        GrantStartingCurrencyIfConfigured();
         OnInventoryChanged?.Invoke();
+    }
+
+    void GrantStartingCurrencyIfConfigured()
+    {
+        if (startingCurrencyItem == null || !startingCurrencyItem.IsValid) return;
+        int n = Mathf.Max(0, startingCurrencyCount);
+        if (n <= 0) return;
+        AddItem(startingCurrencyItem, n);
     }
 
     void OnValidate()

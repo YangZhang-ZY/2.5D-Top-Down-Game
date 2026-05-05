@@ -15,6 +15,10 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Rigidbody2D 在 XY 上移动时与 Camera Pivot 绕 Z 转一致，填 (0,0,1)。")]
     [SerializeField] Vector3 walkPlaneNormal = Vector3.forward;
 
+    [Header("Menu / cutscene")]
+    [Tooltip("勾选后不接受移动、攻击、冲刺、回血、格挡等（例如主菜单里摆着的 Player）。")]
+    public bool suppressPlayerInput;
+
 
     // ==================== 组件引用（Awake 获取） ====================
     public Rigidbody2D rb;
@@ -139,6 +143,9 @@ public class PlayerController : MonoBehaviour
         [Tooltip("朝右(D)攻击时的 Hitbox 偏移")]
         public float hitboxOffsetRight = 0.5f;
 
+        [Tooltip("本段挥刀音效；留空则用 Player 上的默认攻击音效。")]
+        public AudioClip swingSound;
+
         /// <summary>根据攻击方向返回对应的 Hitbox 偏移</summary>
         public float GetHitboxOffsetForDirection(Vector2 dir)
         {
@@ -177,6 +184,13 @@ public class PlayerController : MonoBehaviour
     [Header("攻击碰撞")]
     [Tooltip("攻击碰撞盒（玩家子物体，带 Collider2D 的 Trigger）")]
     public AttackHitbox attackHitbox;
+
+    [Header("攻击音效")]
+    [Tooltip("每段挥刀默认音效；可在下方 Attack Sequence 各段里用 Swing Sound 覆盖。")]
+    [SerializeField] AudioClip attackSwingSound;
+    [SerializeField, Range(0f, 1f)] float attackSwingVolume = 1f;
+    [Tooltip("可选；不拖则用本物体上 AudioSource，再没有则生成临时 2D 音源播放一次。")]
+    [SerializeField] AudioSource attackSwingAudioSource;
 
     [Header("格挡")]
     [Tooltip("按下后开始格挡并持续这么多秒")]
@@ -401,6 +415,31 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>每段攻击开始时：<see cref="AttackStepConfig.swingSound"/> 优先，否则 <see cref="attackSwingSound"/>。</summary>
+    public void PlayAttackSwingSound(int stepIndex1Based)
+    {
+        AudioClip clip = null;
+        if (attackSteps != null && stepIndex1Based >= 1 && stepIndex1Based <= attackSteps.Length)
+            clip = attackSteps[stepIndex1Based - 1].swingSound;
+        if (clip == null)
+            clip = attackSwingSound;
+        if (clip == null) return;
+
+        AudioSource src = attackSwingAudioSource != null ? attackSwingAudioSource : GetComponent<AudioSource>();
+        if (src != null)
+        {
+            src.PlayOneShot(clip, attackSwingVolume);
+            return;
+        }
+
+        var temp = new GameObject("AttackSwingOneShot");
+        temp.transform.position = transform.position;
+        var one = temp.AddComponent<AudioSource>();
+        one.spatialBlend = 0f;
+        one.PlayOneShot(clip, attackSwingVolume);
+        Destroy(temp, clip.length + 0.05f);
+    }
+
     /// <summary>受击状态结束时调用：从这一刻起刷新无敌计时（默认 0.5s，见 postHurtInvincibilityDuration）。</summary>
     public void ApplyPostHurtInvincibility()
     {
@@ -462,7 +501,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (PlayerInputBlocker.IsBlocked)
+        if (InputReadingBlocked())
         {
             Moveinput = Vector2.zero;
             wantAttack = false;
@@ -512,7 +551,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (PlayerInputBlocker.IsBlocked)
+        if (InputReadingBlocked())
             rb.linearVelocity = Vector2.zero;
     }
 
@@ -544,6 +583,8 @@ public class PlayerController : MonoBehaviour
         Vector2 world = r2 * inputN.x + u2 * inputN.y;
         return world.sqrMagnitude > 1e-6f ? world.normalized : inputN;
     }
+
+    bool InputReadingBlocked() => PlayerInputBlocker.IsBlocked || suppressPlayerInput;
 
     private void OnDestroy()
     {

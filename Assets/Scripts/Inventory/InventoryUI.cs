@@ -32,6 +32,9 @@ public class InventoryUI : MonoBehaviour
     public TextMeshProUGUI weightText;
 
     [Header("Gold (optional)")]
+    [Tooltip("若赋值：goldText 显示玩家背包里该道具的数量（与商人/建造的「钱」一致）；与 wallet 二选一即可。")]
+    [SerializeField] ItemData currencyItem;
+
     [Tooltip("Player wallet; leave empty to search on the same object / parents as player inventory.")]
     public PlayerWallet wallet;
 
@@ -89,11 +92,16 @@ public class InventoryUI : MonoBehaviour
         if (inventory == null)
             inventory = playerInventory;
 
-        if (wallet == null && playerInventory != null)
-            wallet = playerInventory.GetComponent<PlayerWallet>() ?? playerInventory.GetComponentInParent<PlayerWallet>();
+        if (currencyItem == null)
+        {
+            if (wallet == null && playerInventory != null)
+                wallet = playerInventory.GetComponent<PlayerWallet>() ?? playerInventory.GetComponentInParent<PlayerWallet>();
 
-        if (wallet != null)
-            wallet.OnGoldChanged.AddListener(OnWalletGoldChanged);
+            if (wallet != null)
+                wallet.OnGoldChanged.AddListener(OnWalletGoldChanged);
+        }
+        else if (playerInventory != null)
+            playerInventory.OnInventoryChanged.AddListener(OnPlayerBagCurrencyChanged);
 
         if (sortButton != null)
             sortButton.onClick.AddListener(OnSortClicked);
@@ -151,8 +159,10 @@ public class InventoryUI : MonoBehaviour
         if (depositSelectionButton != null)
             depositSelectionButton.onClick.RemoveListener(TryDepositSelectedToStorage);
 
-        if (wallet != null)
+        if (currencyItem == null && wallet != null)
             wallet.OnGoldChanged.RemoveListener(OnWalletGoldChanged);
+        if (currencyItem != null && playerInventory != null)
+            playerInventory.OnInventoryChanged.RemoveListener(OnPlayerBagCurrencyChanged);
         if (inventory != null)
             inventory.OnInventoryChanged.RemoveListener(RefreshAll);
         ReleaseInputBlockIfNeeded();
@@ -376,10 +386,17 @@ public class InventoryUI : MonoBehaviour
 
     void OnWalletGoldChanged(int _) => RefreshGoldDisplay();
 
+    void OnPlayerBagCurrencyChanged() => RefreshGoldDisplay();
+
     void RefreshGoldDisplay()
     {
         if (goldText == null)
             return;
+        if (currencyItem != null && currencyItem.IsValid && playerInventory != null)
+        {
+            goldText.text = playerInventory.GetItemCount(currencyItem).ToString();
+            return;
+        }
         if (wallet == null)
         {
             goldText.text = string.Empty;

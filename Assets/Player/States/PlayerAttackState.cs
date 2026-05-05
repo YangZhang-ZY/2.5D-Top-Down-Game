@@ -62,6 +62,8 @@ public class PlayerAttackState : StateBase<PlayerController>
             float offset = config.GetHitboxOffsetForDirection(dirInputHit);
             ctx.attackHitbox.EnableHitbox(config.attackDamage, dirWorldHit, offset, 0f);
         }
+
+        ctx.PlayAttackSwingSound(step);
     }
 
     public override void Exit(PlayerController ctx)
