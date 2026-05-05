@@ -14,6 +14,12 @@ public class TurretProjectile : MonoBehaviour
     [Tooltip("Lifetime in seconds; destroys the projectile afterwards.")]
     [SerializeField] private float lifetime = 4f;
 
+    [Header("Targeting (optional)")]
+    [Tooltip("勾选后：只伤害 Layer 在下列 Mask 内的碰撞体（与 AttackHitbox 相同；不勾选则按 IDamageable 命中，不按层过滤）。")]
+    [SerializeField] bool useHitLayerMask;
+
+    [SerializeField] LayerMask hitLayers;
+
     [Header("Facing (arrow sprites)")]
     [Tooltip("Aligns rotation to velocity. Offset in degrees if the art faces +X (0) or +Y (-90), etc.")]
     [SerializeField] private float rotationOffsetDegrees;
@@ -62,6 +68,9 @@ public class TurretProjectile : MonoBehaviour
 
         if (damageSource != null &&
             (other.gameObject == damageSource || other.transform.IsChildOf(damageSource.transform)))
+            return;
+
+        if (useHitLayerMask && (hitLayers.value & (1 << other.gameObject.layer)) == 0)
             return;
 
         var dmg = other.GetComponent<IDamageable>() ?? other.GetComponentInParent<IDamageable>();

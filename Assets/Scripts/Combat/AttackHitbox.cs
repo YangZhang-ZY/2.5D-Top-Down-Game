@@ -14,6 +14,12 @@ public class AttackHitbox : MonoBehaviour
     [Tooltip("Damage source for DamageInfo.source (usually the player).")]
     public GameObject owner;
 
+    [Header("Targeting (optional)")]
+    [Tooltip("勾选后：只伤害 Layer 在下列 Mask 内的碰撞体（用于区分 Default/Enemy/自定义 Building 等）。不勾选则与原先一致，按 IDamageable 命中。")]
+    [SerializeField] bool useHitLayerMask;
+
+    [SerializeField] LayerMask hitLayers;
+
     readonly HashSet<GameObject> _hitThisAttack = new HashSet<GameObject>();
     readonly List<Collider2D> _overlapBuffer = new List<Collider2D>(24);
 
@@ -72,6 +78,8 @@ public class AttackHitbox : MonoBehaviour
     void TryHit(Collider2D other)
     {
         if (!_collider.enabled || other == null) return;
+        if (useHitLayerMask && (hitLayers.value & (1 << other.gameObject.layer)) == 0)
+            return;
         if (owner != null)
         {
             GameObject otherGo = other.gameObject;

@@ -49,13 +49,44 @@ public class Inventory : MonoBehaviour
     private void Awake()
     {
         EnsureSlotCount();
+        OnInventoryChanged?.Invoke();
     }
 
-    /// <summary>Keeps internal slot list length in sync with capacity.</summary>
+    void OnValidate()
+    {
+        capacity = Mathf.Max(1, capacity);
+        if (!Application.isPlaying || _slots == null) return;
+        EnsureSlotCount();
+        OnInventoryChanged?.Invoke();
+    }
+
+    /// <summary>Keeps internal slot list length in sync with <see cref="capacity"/> (grow or shrink trailing empty slots).</summary>
     private void EnsureSlotCount()
     {
         while (_slots.Count < capacity)
             _slots.Add(new InventorySlot());
+
+        while (_slots.Count > capacity)
+        {
+            var last = _slots[_slots.Count - 1];
+            if (!last.IsEmpty)
+            {
+                capacity = _slots.Count;
+                break;
+            }
+
+            _slots.RemoveAt(_slots.Count - 1);
+        }
+    }
+
+    /// <summary>增加空格子数量（如 NPC 升级背包）。会提升 <see cref="capacity"/> 并触发 <see cref="OnInventoryChanged"/>。</summary>
+    public void ExpandCapacity(int additionalSlots)
+    {
+        if (additionalSlots <= 0) return;
+        capacity += additionalSlots;
+        EnsureSlotCount();
+        OnInventoryChanged?.Invoke();
+        DebugLogSlotsIfEnabled($"ExpandCapacity +{additionalSlots} (capacity={capacity})");
     }
 
     /// <summary>Logs every slot (context menu on component in Play mode).</summary>
@@ -332,6 +363,142 @@ public class Inventory : MonoBehaviour
 
         DebugLogSlotsIfEnabled("SwapSlots");
         OnInventoryChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// UI 拖拽落格：同一背包内移动/合并/交换，或跨背包移动/合并/交换（尊重重量与堆叠上限）。
+    /// </summary>
+    public static bool TryDragDropBetweenSlots(Inventory fromInv, int fromIndex, Inventory toInv, int toIndex)
+    {
+        if (fromInv == null || toInv == null) return false;
+        if (fromIndex < 0 || fromIndex >= fromInv._slots.Count) return false;
+        if (toIndex < 0 || toIndex >= toInv._slots.Count) return false;
+        if (fromInv == toInv && fromIndex == toIndex) return false;
+
+        if (fromInv == toInv)
+            return fromInv.TryDragDropInternal(fromIndex, toIndex);
+
+        return TryDragDropCross(fromInv, fromIndex, toInv, toIndex);
+    }
+
+    bool TryDragDropInternal(int from, int to)
+    {
+        var sFrom = _slots[from];
+        var sTo = _slots[to];
+        if (sFrom.IsEmpty) return false;
+
+        if (sTo.IsEmpty)
+        {
+            sTo.Set(sFrom.item, sFrom.count);
+            sFrom.Clear();
+            DebugLogSlotsIfEnabled("TryDragDropInternal move");
+            OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        if (sTo.item == sFrom.item && sTo.CanAddMore(sFrom.item))
+        {
+            int space = sTo.RemainingStackSpace(sFrom.item);
+            int move = Mathf.Min(space, sFrom.count);
+            if (move <= 0) return false;
+            sTo.count += move;
+            sFrom.count -= move;
+            if (sFrom.count <= 0) sFrom.Clear();
+            DebugLogSlotsIfEnabled("TryDragDropInternal merge");
+            OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        SwapSlots(from, to);
+        return true;
+    }
+
+    static bool TryDragDropCross(Inventory a, int idxA, Inventory b, int idxB)
+    {
+        var sA = a._slots[idxA];
+        var sB = b._slots[idxB];
+        if (sA.IsEmpty) return false;
+
+        if (sB.IsEmpty)
+        {
+            int move = MaxMoveCountToEmptySlot(a, idxA, b);
+            if (move <= 0) return false;
+            b._slots[idxB].Set(sA.item, move);
+            sA.count -= move;
+            if (sA.count <= 0) sA.Clear();
+            a.DebugLogSlotsIfEnabled("TryDragDropCross move");
+            b.DebugLogSlotsIfEnabled("TryDragDropCross move");
+            a.OnInventoryChanged?.Invoke();
+            b.OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        if (sB.item == sA.item && sB.CanAddMore(sA.item))
+        {
+            int space = sB.RemainingStackSpace(sA.item);
+            int move = Mathf.Min(space, sA.count);
+            move = Mathf.Min(move, MaxExtraCountByWeight(b, sA.item, move));
+            if (move <= 0) return false;
+            sB.count += move;
+            sA.count -= move;
+            if (sA.count <= 0) sA.Clear();
+            a.DebugLogSlotsIfEnabled("TryDragDropCross merge");
+            b.DebugLogSlotsIfEnabled("TryDragDropCross merge");
+            a.OnInventoryChanged?.Invoke();
+            b.OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        return TrySwapSlotsCross(a, idxA, b, idxB);
+    }
+
+    static int MaxMoveCountToEmptySlot(Inventory fromInv, int fromIdx, Inventory toInv)
+    {
+        var sFrom = fromInv._slots[fromIdx];
+        if (sFrom.IsEmpty || sFrom.item == null) return 0;
+        int count = Mathf.Min(sFrom.count, sFrom.item.maxStack);
+        float w = sFrom.item.weight;
+        if (w <= 0f) return count;
+        float room = toInv.maxWeight - toInv.GetCurrentWeight();
+        if (room <= 0f) return 0;
+        int maxByWeight = Mathf.FloorToInt(room / w);
+        return Mathf.Max(0, Mathf.Min(count, maxByWeight));
+    }
+
+    static int MaxExtraCountByWeight(Inventory inv, ItemData item, int desired)
+    {
+        if (item == null || desired <= 0) return 0;
+        float w = item.weight;
+        if (w <= 0f) return desired;
+        float room = inv.maxWeight - inv.GetCurrentWeight();
+        if (room <= 0f) return 0;
+        return Mathf.Max(0, Mathf.Min(desired, Mathf.FloorToInt(room / w)));
+    }
+
+    static bool TrySwapSlotsCross(Inventory invA, int idxA, Inventory invB, int idxB)
+    {
+        var slotA = invA._slots[idxA];
+        var slotB = invB._slots[idxB];
+        float wA = slotA.GetTotalWeight();
+        float wB = slotB.GetTotalWeight();
+        double newWa = invA.GetCurrentWeight() - wA + wB;
+        double newWb = invB.GetCurrentWeight() - wB + wA;
+        if (newWa > invA.maxWeight + 1e-5 || newWb > invB.maxWeight + 1e-5)
+            return false;
+
+        var itemA = slotA.item;
+        var countA = slotA.count;
+        var itemB = slotB.item;
+        var countB = slotB.count;
+
+        slotA.Set(itemB, countB);
+        slotB.Set(itemA, countA);
+
+        invA.DebugLogSlotsIfEnabled("TrySwapSlotsCross");
+        invB.DebugLogSlotsIfEnabled("TrySwapSlotsCross");
+        invA.OnInventoryChanged?.Invoke();
+        invB.OnInventoryChanged?.Invoke();
+        return true;
     }
 
     /// <summary>Increases slot count (only grows).</summary>

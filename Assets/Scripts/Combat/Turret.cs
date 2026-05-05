@@ -42,6 +42,12 @@ public class Turret : MonoBehaviour
     private float _baseDamage;
     private float _baseRange;
     private float _baseShotsPerSecond;
+    Health _structureHealth;
+
+    void Awake()
+    {
+        _structureHealth = GetComponent<Health>();
+    }
 
     /// <summary>Inspector values are treated as level 1 after <see cref="ApplyUpgradeLevel"/> is used.</summary>
     private void CacheBasesIfNeeded()
@@ -65,6 +71,8 @@ public class Turret : MonoBehaviour
 
     private void Update()
     {
+        if (_structureHealth != null && _structureHealth.IsDead)
+            return;
         if (bulletPrefab == null) return;
 
         _fireCooldown -= Time.deltaTime;

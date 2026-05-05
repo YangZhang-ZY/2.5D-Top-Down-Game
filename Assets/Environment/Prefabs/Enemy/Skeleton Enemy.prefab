@@ -357,6 +357,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitbox
   owner: {fileID: 6549643654172214323}
+  useHitLayerMask: 1
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 7680
 --- !u!1 &6340787549389985704
 GameObject:
   m_ObjectHideFlags: 0
@@ -563,6 +567,9 @@ MonoBehaviour:
   OnDeath:
     m_PersistentCalls:
       m_Calls: []
+  OnHealed:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &7459598339249594156
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -581,13 +588,16 @@ MonoBehaviour:
   playerProvokeRange: 8
   moveSpeed: 2
   chaseRange: 8
+  maxPlayerEngageRange: 0
   attackRange: 5
+  moveStopDistance: 0
   attackCooldown: 4
   canBeKnockedBack: 1
   knockbackResistance: 0
   knockbackMovementPauseDuration: 0.15
   hitFlashDuration: 0.1
   hitSfx: {fileID: 0}
+  destroyDelayAfterDeath: 2
   animParamSpeed: Speed
   animParamIsDead: IsDead
   animTriggerHit: Hit

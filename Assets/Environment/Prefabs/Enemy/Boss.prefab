@@ -19,7 +19,7 @@ GameObject:
   - component: {fileID: 6584314505121686167}
   - component: {fileID: 4917517769048695293}
   - component: {fileID: 149424319201851439}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Boss
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -868,6 +868,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitbox
   owner: {fileID: 0}
+  useHitLayerMask: 1
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 7680
 --- !u!1 &6614660092472657100
 GameObject:
   m_ObjectHideFlags: 0

@@ -113,6 +113,10 @@ MonoBehaviour:
   damage: 0
   damageSource: {fileID: 0}
   lifetime: 4
+  useHitLayerMask: 1
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 64
   rotationOffsetDegrees: -100.8
 --- !u!1 &5388972059886441763
 GameObject:
@@ -219,7 +223,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3506f60ed3943e46b64ac95601952fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
-  preserveLocalRollZ: 1
 --- !u!114 &2446933050186187933
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -232,5 +235,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 152dd47f3c59dcd4f83c1a8fb1b44152, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SortByY
+  sortCamera: {fileID: 0}
+  axisMode: 1
   sortOrderScale: 100
   orderOffset: 0

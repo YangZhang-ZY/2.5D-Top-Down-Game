@@ -82,6 +82,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AttackHitbox
   owner: {fileID: 8393362421752219176}
+  useHitLayerMask: 0
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 7680
 --- !u!1 &3579885468184025073
 GameObject:
   m_ObjectHideFlags: 0

@@ -171,6 +171,9 @@ public class MerchantUI : MonoBehaviour
     /// <summary>Call when opening the panel (e.g. from interaction script).</summary>
     public void Open()
     {
+        if (onlyTradeDuringDay && DayNightManager.Instance != null && !DayNightManager.Instance.IsDay)
+            return;
+
         gameObject.SetActive(true);
         RequestInputBlockIfNeeded();
         RefreshAll();

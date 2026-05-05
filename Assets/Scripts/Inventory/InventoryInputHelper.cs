@@ -40,6 +40,6 @@ public class InventoryInputHelper : MonoBehaviour
         if (inventoryAction == null || inventoryAction.action == null) return;
 
         if (inventoryAction.action.WasPressedThisFrame())
-            inventoryUI.Toggle();
+            inventoryUI.Toggle(); // 关闭任意视图；从关闭状态打开时固定为玩家背包
     }
 }

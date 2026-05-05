@@ -16,10 +16,10 @@ TagManager:
   - Enemy
   - projectile
   - EnemyGate
-  - 
-  - 
-  - 
-  - 
+  - Wall
+  - Tower
+  - Base
+  - Player
   - 
   - 
   - 

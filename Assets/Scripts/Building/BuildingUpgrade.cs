@@ -2,11 +2,15 @@ using UnityEngine;
 using UnityEngine.Events;
 using TMPro;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Stand near a built turret or wall and press the upgrade action to spend items and raise level.
-/// Requires a trigger <see cref="Collider2D"/> on this object or a child (non-trigger colliders are ignored).
-/// Turret: same GameObject must have <see cref="Turret"/>. Wall: same GameObject must have <see cref="Health"/> (no Turret).
+/// Requires a trigger <see cref="Collider2D"/> on this object or a child (non-trigger colliders are ignored),
+/// unless <see cref="interactionViaBuildSiteOnly"/> is true — then a scene <see cref="BuildSite"/> trigger handles
+/// prompts and input for both build and upgrade.
+/// Wall: <see cref="Health"/> only (no <see cref="Turret"/>). Turret: <see cref="Turret"/>; add <see cref="Health"/> on the same
+/// object for ruin/repair and HP upgrades like walls, and wire <see cref="interactionViaBuildSiteOnly"/> like walls so <see cref="BuildSite"/> drives UI.
 /// Cost arrays: length should be <c>maxLevel - 1</c> (one entry per upgrade step). Shorter arrays repeat the last entry.
 /// </summary>
 public class BuildingUpgrade : MonoBehaviour
@@ -26,9 +30,13 @@ public class BuildingUpgrade : MonoBehaviour
 
     [SerializeField] private float fireRateBonusPerLevel = 0.25f;
 
+    [Tooltip("每次升级增加的最大生命（仅当同一物体上同时有 Turret 与 Health 时生效；与围墙分开配置）。")]
+    [SerializeField] private int turretMaxHpBonusPerLevel = 15;
+
     [Header("Wall bonuses")]
-    [Tooltip("Max HP added each time the wall levels up.")]
-    [SerializeField] private int maxHpBonusPerLevel = 25;
+    [Tooltip("每次升级增加的最大生命（仅围墙：有 Health、无 Turret）。")]
+    [FormerlySerializedAs("maxHpBonusPerLevel")]
+    [SerializeField] private int wallMaxHpBonusPerLevel = 25;
 
     [Header("Costs (index 0 = upgrade from level 1 to 2)")]
     [SerializeField] private int[] costWoodSteps;
@@ -43,8 +51,12 @@ public class BuildingUpgrade : MonoBehaviour
 
     [SerializeField] private ItemData coinItem;
 
+    [Header("BuildSite integration")]
+    [Tooltip("勾选后：不再使用本物体上的升级触发区与 Prompt，由场景里同一格 BuildSite 的触发器负责走进区域显示升级消耗与按键。")]
+    [SerializeField] private bool interactionViaBuildSiteOnly;
+
     [Header("Input")]
-    [Tooltip("Usually the same Interact or Build action as other buildings.")]
+    [Tooltip("Usually the same Interact or Build action as other buildings. Hosted by BuildSite 时改由 BuildSite 的按键处理，此处可不赋值。")]
     [SerializeField] private InputActionReference upgradeAction;
 
     [Header("Prompt UI (optional)")]
@@ -79,8 +91,24 @@ public class BuildingUpgrade : MonoBehaviour
 
     public int MaxLevel => maxLevel;
 
+    /// <summary>已达最高级，不应再显示升级 UI。</summary>
+    public bool IsMaxLevel => currentLevel >= maxLevel;
+
+    /// <summary>UI 与升级判定用的物品，与 <see cref="BuildSite"/> 持有量显示一致时需配置相同 ItemData。</summary>
+    public ItemData WoodItem => woodItem;
+
+    public ItemData StoneItem => stoneItem;
+
+    public ItemData CoinItem => coinItem;
+
+    /// <summary>升级提示标题用名称（与 Inspector structureName 一致）。</summary>
+    public string StructureDisplayName => structureName;
+
+    public bool UsesBuildSiteInteractionOnly => interactionViaBuildSiteOnly;
+
     private Turret _turret;
     private Health _health;
+    /// <summary>True if a <see cref="Turret"/> is present (may still have <see cref="Health"/> for repair/HP bar).</summary>
     private bool _isTurret;
     private Collider2D _triggerZone;
     private bool _playerInRange;
@@ -102,35 +130,49 @@ public class BuildingUpgrade : MonoBehaviour
             return;
         }
 
-        _triggerZone = FindTriggerCollider();
-        if (_triggerZone == null)
+        if (_isTurret && _health == null && debugLog)
+            Debug.Log(
+                $"[BuildingUpgrade] {name}: Turret has no Health — use BuildSite + Health on this object for repair/upgrade UI like walls.",
+                this);
+
+        if (interactionViaBuildSiteOnly)
         {
-            Debug.LogError($"[BuildingUpgrade] {name}: add a trigger Collider2D (this object or child) for the upgrade zone.", this);
-            enabled = false;
-            return;
+            _triggerZone = null;
+            if (promptRoot != null)
+                promptRoot.SetActive(false);
         }
+        else
+        {
+            _triggerZone = FindTriggerCollider();
+            if (_triggerZone == null)
+            {
+                Debug.LogError($"[BuildingUpgrade] {name}: add a trigger Collider2D (this object or child) for the upgrade zone.", this);
+                enabled = false;
+                return;
+            }
 
-        if (upgradeAction == null || upgradeAction.action == null)
-            Debug.LogWarning($"[BuildingUpgrade] {name}: assign an Upgrade Input Action Reference.", this);
+            if (upgradeAction == null || upgradeAction.action == null)
+                Debug.LogWarning($"[BuildingUpgrade] {name}: assign an Upgrade Input Action Reference.", this);
 
-        if (promptRoot != null)
-            promptRoot.SetActive(false);
+            if (promptRoot != null)
+                promptRoot.SetActive(false);
 
-        var zone = _triggerZone.gameObject.GetComponent<BuildingUpgradeZone>();
-        if (zone == null)
-            zone = _triggerZone.gameObject.AddComponent<BuildingUpgradeZone>();
-        zone.Init(this);
+            var zone = _triggerZone.gameObject.GetComponent<BuildingUpgradeZone>();
+            if (zone == null)
+                zone = _triggerZone.gameObject.AddComponent<BuildingUpgradeZone>();
+            zone.Init(this);
+        }
     }
 
     private void OnEnable()
     {
-        if (upgradeAction != null && upgradeAction.action != null)
+        if (!interactionViaBuildSiteOnly && upgradeAction != null && upgradeAction.action != null)
             upgradeAction.action.Enable();
     }
 
     private void OnDisable()
     {
-        if (upgradeAction != null && upgradeAction.action != null)
+        if (!interactionViaBuildSiteOnly && upgradeAction != null && upgradeAction.action != null)
             upgradeAction.action.Disable();
     }
 
@@ -143,11 +185,76 @@ public class BuildingUpgrade : MonoBehaviour
 
     private void Update()
     {
+        if (interactionViaBuildSiteOnly) return;
         if (!_playerInRange || currentLevel >= maxLevel) return;
         if (upgradeAction == null || upgradeAction.action == null) return;
         if (!upgradeAction.action.WasPressedThisFrame()) return;
 
         TryUpgrade();
+    }
+
+    /// <summary>BuildSite 调用：下一级升级所需资源（已满级则全 0）。</summary>
+    public void GetNextUpgradeCosts(out int wood, out int stone, out int coin)
+    {
+        if (IsMaxLevel)
+        {
+            wood = stone = coin = 0;
+            return;
+        }
+
+        int idx = currentLevel - 1;
+        wood = GetStepCost(costWoodSteps, idx);
+        stone = GetStepCost(costStoneSteps, idx);
+        coin = GetStepCost(costCoinSteps, idx);
+    }
+
+    /// <summary>BuildSite 在同一按键下代为扣费升级。</summary>
+    /// <returns>是否成功升级一级。</returns>
+    public bool TryUpgradeWithInventory(Inventory inv, out string failReason)
+    {
+        failReason = null;
+        if (IsMaxLevel)
+        {
+            failReason = "Already max level.";
+            return false;
+        }
+
+        if (!ValidateCostConfigForStep(out failReason))
+            return false;
+
+        if (inv == null)
+        {
+            failReason = "No Inventory on player.";
+            return false;
+        }
+
+        int idx = currentLevel - 1;
+        int w = GetStepCost(costWoodSteps, idx);
+        int s = GetStepCost(costStoneSteps, idx);
+        int c = GetStepCost(costCoinSteps, idx);
+
+        if (!CanAfford(inv, w, s, c, out failReason))
+            return false;
+
+        Spend(inv, w, s, c);
+
+        currentLevel++;
+        if (_isTurret)
+            ApplyTurretLevel();
+        if (_health != null)
+        {
+            int hpBonus = _isTurret ? turretMaxHpBonusPerLevel : wallMaxHpBonusPerLevel;
+            if (hpBonus > 0)
+                _health.AddMaxHP(hpBonus);
+        }
+
+        if (debugLog)
+            Debug.Log($"[BuildingUpgrade] {name} upgraded to level {currentLevel}.", this);
+
+        onUpgraded?.Invoke(currentLevel);
+        if (!interactionViaBuildSiteOnly)
+            RefreshPrompt();
+        return true;
     }
 
     internal void OnZoneEnter(Collider2D other)
@@ -239,45 +346,11 @@ public class BuildingUpgrade : MonoBehaviour
 
     private void TryUpgrade()
     {
-        if (currentLevel >= maxLevel) return;
-
-        if (!ValidateCostConfigForStep(out string err))
+        if (!TryUpgradeWithInventory(_playerInventory, out string err))
         {
-            Debug.LogWarning($"[BuildingUpgrade] {name}: {err}", this);
-            return;
+            if (debugLog && !string.IsNullOrEmpty(err))
+                Debug.Log($"[BuildingUpgrade] {name}: {err}", this);
         }
-
-        if (_playerInventory == null)
-        {
-            Debug.LogWarning($"[BuildingUpgrade] {name}: no Inventory on player.", this);
-            return;
-        }
-
-        int idx = currentLevel - 1;
-        int w = GetStepCost(costWoodSteps, idx);
-        int s = GetStepCost(costStoneSteps, idx);
-        int c = GetStepCost(costCoinSteps, idx);
-
-        if (!CanAfford(_playerInventory, w, s, c, out string reason))
-        {
-            if (debugLog)
-                Debug.Log($"[BuildingUpgrade] {name}: cannot upgrade — {reason}", this);
-            return;
-        }
-
-        Spend(_playerInventory, w, s, c);
-
-        currentLevel++;
-        if (_isTurret)
-            ApplyTurretLevel();
-        else
-            _health.AddMaxHP(maxHpBonusPerLevel);
-
-        if (debugLog)
-            Debug.Log($"[BuildingUpgrade] {name} upgraded to level {currentLevel}.", this);
-
-        onUpgraded?.Invoke(currentLevel);
-        RefreshPrompt();
     }
 
     private void ApplyTurretLevel()
@@ -340,6 +413,7 @@ public class BuildingUpgrade : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
+        if (interactionViaBuildSiteOnly) return;
         var z = _triggerZone != null ? _triggerZone : FindTriggerCollider();
         if (z == null) return;
         Gizmos.color = new Color(0.4f, 0.9f, 0.4f, 0.25f);

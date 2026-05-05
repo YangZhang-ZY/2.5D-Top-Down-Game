@@ -4,11 +4,15 @@ using UnityEngine.EventSystems;
 using TMPro;
 
 /// <summary>
-/// Single inventory slot UI: icon and stack count.
-/// Root of the slot prefab.
-/// Selection: assign <see cref="slotButton"/> (recommended) or leave null — a raycast graphic is ensured for clicks.
+/// Single inventory slot UI: icon, stack count, 点击选中、拖拽与其它格子（含另一只 <see cref="InventoryUI"/> 面板）交互动货。
+/// 拖拽时用本格及其子物体上所有 <see cref="Graphic"/> 的 raycast 开关代替 CanvasGroup，避免 MissingComponentException。
 /// </summary>
-public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
+public class InventorySlotUI : MonoBehaviour,
+    IPointerClickHandler,
+    IBeginDragHandler,
+    IDragHandler,
+    IEndDragHandler,
+    IDropHandler
 {
     [Header("References")]
     [Tooltip("Icon image for the item.")]
@@ -24,12 +28,11 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
     [Tooltip("Optional: Button on this slot; wires select on click. If null, uses IPointerClickHandler on this GameObject.")]
     public Button slotButton;
 
-    private Inventory _inventory;
-    private int _slotIndex;
-    private InventoryUI _inventoryUI;
-    private bool _loggedMissingUIRefs;
+    Inventory _inventory;
+    int _slotIndex;
+    InventoryUI _inventoryUI;
+    bool _loggedMissingUIRefs;
 
-    /// <summary>Binds to a slot index on the given inventory.</summary>
     public void Bind(Inventory inventory, int slotIndex, InventoryUI owner = null)
     {
         _inventory = inventory;
@@ -75,14 +78,54 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
             graphic.raycastTarget = true;
     }
 
-    /// <summary>Called by <see cref="InventoryUI"/> when selection changes.</summary>
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        if (_inventory == null) return;
+        if (_slotIndex < 0 || _slotIndex >= _inventory.Slots.Count) return;
+        if (_inventory.Slots[_slotIndex].IsEmpty) return;
+
+        SetGraphicsRaycastRecursive(false);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        SetGraphicsRaycastRecursive(true);
+    }
+
+    void OnDisable()
+    {
+        SetGraphicsRaycastRecursive(true);
+    }
+
+    void SetGraphicsRaycastRecursive(bool raycastTarget)
+    {
+        foreach (var g in GetComponentsInChildren<Graphic>(true))
+        {
+            if (g != null)
+                g.raycastTarget = raycastTarget;
+        }
+    }
+
+    public void OnDrop(PointerEventData eventData)
+    {
+        var src = eventData.pointerDrag != null ? eventData.pointerDrag.GetComponent<InventorySlotUI>() : null;
+        if (src == null || src == this) return;
+        if (!Inventory.TryDragDropBetweenSlots(src._inventory, src._slotIndex, _inventory, _slotIndex))
+            return;
+
+        InventoryUI.ClearSelectionEverywhere();
+    }
+
     public void SetSelected(bool selected)
     {
         if (selectionHighlight != null)
             selectionHighlight.SetActive(selected);
     }
 
-    /// <summary>Refreshes visuals when inventory changes.</summary>
     public void Refresh()
     {
         if (_inventory == null || _slotIndex < 0 || _slotIndex >= _inventory.Slots.Count)
@@ -121,7 +164,6 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
         }
     }
 
-    /// <summary>Clears visuals.</summary>
     public void Clear()
     {
         if (iconImage != null)

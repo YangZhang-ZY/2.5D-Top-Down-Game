@@ -281,6 +281,32 @@ public class PlayerController : MonoBehaviour
 
     public void SetBlockCooldown(float seconds) => _blockCooldownTimer = Mathf.Max(0f, seconds);
 
+    // ==================== NPC 属性强化（StatTrainer 等） ====================
+
+    /// <summary>增加最大生命与当前生命（与 <see cref="Health.AddMaxHP"/> 相同）。</summary>
+    public void ApplyTrainerBonusMaxHp(int delta)
+    {
+        if (delta <= 0) return;
+        if (_health == null) _health = GetComponent<Health>();
+        if (_health == null) return;
+        _health.AddMaxHP(delta);
+    }
+
+    /// <summary>永久增加移动速度（可多次叠加）。</summary>
+    public void ApplyTrainerBonusMoveSpeed(float delta)
+    {
+        if (Mathf.Approximately(delta, 0f)) return;
+        MoveSpeed = Mathf.Max(0.1f, MoveSpeed + delta);
+    }
+
+    /// <summary>为每一段普攻连招增加固定伤害。</summary>
+    public void ApplyTrainerBonusAttackDamageAllSteps(float delta)
+    {
+        if (Mathf.Approximately(delta, 0f) || attackSteps == null || attackSteps.Length == 0) return;
+        for (int i = 0; i < attackSteps.Length; i++)
+            attackSteps[i].attackDamage = Mathf.Max(0.01f, attackSteps[i].attackDamage + delta);
+    }
+
     /// <summary>能否开始背包回血读条：有物品、未满血、未死。</summary>
     public bool CanStartHeal()
     {
