@@ -1,140 +1,140 @@
 using UnityEngine;
 
 /// <summary>
-/// 敌人通用基类。
+/// Shared enemy base.
 ///
-/// 【功能】
-/// - 塔防目标：首要目标（如水晶）优先；玩家挑衅或被打后仇恨玩家；脱战后回到首要目标
-/// - 自动查找玩家（Tag Player）
-/// - 攻击冷却管理
-/// - 受击时：播放 Hit 动画、音效、闪白（可扩展）、击退
-/// - 死亡时：停止移动、播放死亡动画、关闭碰撞，再在 <see cref="destroyDelayAfterDeath"/> 秒后销毁
+/// Features
+/// - TD focus: primary target (e.g. crystal) first; player taunt or taking damage pulls aggro; leash returns to primary.
+/// - Auto-find player (Tag Player).
+/// - Attack cooldown.
+/// - On hit: Hit anim, SFX, flash hook, knockback.
+/// - On death: stop, death anim, disable collider, destroy after <see cref="destroyDelayAfterDeath"/>.
 ///
-/// 【依赖组件】
-/// - 同物体上必须有：Health、Rigidbody2D
-/// - 自己或子物体上应有：Animator（用于 Idle/Run/Hit/Death 等）
+/// Required components
+/// - Same object: Health, Rigidbody2D.
+/// - Self or child: Animator (Idle/Run/Hit/Death, etc.).
 ///
-/// 【子类需要做的】
-/// - 重写 UpdateAI()：决定什么时候 Idle / 追击 / 攻击 / 治疗
-/// - 重写 PerformAttack()：具体攻击方式（近战挥砍 / 远程发射 / 治疗）
+/// Subclasses must
+/// - Override <see cref="UpdateAI"/>: when to idle / chase / attack / heal.
+/// - Override <see cref="PerformAttack"/>: melee swing / ranged shot / heal, etc.
 ///
-/// 【使用步骤】
-/// 1. 新建脚本继承 EnemyBase（如 WarriorEnemy）
-/// 2. 实现 UpdateAI 和 PerformAttack
-/// 3. 给敌人物体添加 Health、Rigidbody2D、子类脚本
-/// 4. 确保 Player 的 Tag 是 "Player"
+/// Setup
+/// 1. Create a script inheriting <see cref="EnemyBase"/> (e.g. Warrior).
+/// 2. Implement <see cref="UpdateAI"/> and <see cref="PerformAttack"/>.
+/// 3. Add Health, Rigidbody2D, and the subclass on the enemy.
+/// 4. Ensure the player's Tag is "Player".
 /// </summary>
 [RequireComponent(typeof(Health), typeof(Rigidbody2D))]
 public abstract class EnemyBase : MonoBehaviour
 {
-    // ==================== 一、Inspector 可调参数 ====================
+    // ==================== Inspector ====================
 
-    [Header("塔防目标（水晶等）")]
-    [Tooltip("首要目标（基地水晶 Transform）。未赋值时可在 Start 中通过 BaseTarget 或 Tag 自动查找。")]
+    [Header("TD target (crystal, etc.)")]
+    [Tooltip("Primary objective (base crystal). If unset, resolved in Start via BaseTarget or Tag.")]
     public Transform primaryTarget;
 
-    [Tooltip("Primary Target 为空时，按此 Tag 查找（需在 Tag Manager 中创建）。若场景有 BaseTarget 组件则优先用其单例。")]
+    [Tooltip("When Primary Target is empty, find by this Tag (define in Tag Manager). BaseTarget singleton wins if present.")]
     public string autoFindBaseTag = "Base";
 
-    [Tooltip("勾选后：移动与追击将忽略 Primary Target，只在玩家进入追击范围或已激怒时追玩家。适合危险区巡逻怪。")]
+    [Tooltip("If enabled, movement ignores Primary Target until the player is in chase range or already aggroed. Good for patrol mobs in a hazard zone.")]
     public bool ignorePrimaryTargetForMovement;
 
-    [Tooltip("玩家进入此距离内会优先追击玩家（挑衅）")]
+    [Tooltip("Within this distance, prefer chasing the player (taunt).")]
     public float playerProvokeRange = 2.5f;
 
-    [Header("移动与感知")]
-    [Tooltip("敌人移动速度")]
+    [Header("Movement & sensing")]
+    [Tooltip("Move speed.")]
     public float moveSpeed = 2f;
 
-    [Tooltip("玩家进入此范围后开始追击（单位：世界距离）；仅针对玩家目标时有效")]
+    [Tooltip("Start chasing the player within this world distance (player as target only).")]
     public float chaseRange = 8f;
 
-    [Tooltip(">0 时：以玩家为移动/脱战目标时用 max(chaseRange, 本值) 作为距离上限。Boss 可用较大值避免开场玩家在 chase 外时 GetMoveTarget 一直为 null。")]
+    [Tooltip("If >0, leash when focused on player uses max(chaseRange, this). Bosses can use a larger value so GetMoveTarget is not null when the player starts outside chaseRange.")]
     public float maxPlayerEngageRange = 0f;
 
-    [Tooltip("进入此范围后可以攻击（近战/远程子类可自定义逻辑）")]
+    [Tooltip("Can attack inside this range (subclasses refine melee vs ranged).")]
     public float attackRange = 1.5f;
 
-    [Tooltip("追击时「走到多近算停」：>0 时与 attackRange 分开。远程 Boss 可把 attackRange 设很大、此处设较小，否则会一直认为已在攻击距离内而不走路。")]
+    [Tooltip("How close to stop when chasing; if >0, separate from attackRange. Ranged bosses can use a huge attackRange and a small stop distance so they still walk into position.")]
     public float moveStopDistance = 0f;
 
-    [Tooltip("两次攻击之间的冷却时间（秒）")]
+    [Tooltip("Seconds between attacks.")]
     public float attackCooldown = 1.0f;
 
-    [Header("受击与击退")]
-    [Tooltip("是否会被击退（Boss 或重型敌人可设为 false）")]
+    [Header("Hit & knockback")]
+    [Tooltip("Whether this enemy can be knocked back (false for Boss / heavy).")]
     public bool canBeKnockedBack = true;
 
-    [Tooltip("击退抗性：0=吃满击退，1=完全免疫击退")]
+    [Tooltip("Knockback resistance: 0 = full, 1 = immune.")]
     [Range(0f, 1f)]
     public float knockbackResistance = 0f;
 
-    [Tooltip("击退后短时间内 AI 不写 linearVelocity、StopMoving 也不清零，避免 Chase/Idle 每帧抵消击退（与 Rigidbody2D 质量无关）。")]
+    [Tooltip("After knockback, AI skips writing linearVelocity / StopMoving briefly so Chase/Idle does not cancel knock each frame (independent of Rigidbody2D mass).")]
     public float knockbackMovementPauseDuration = 0.15f;
 
-    [Tooltip("受击闪白持续时间（秒），闪白效果需配合 HitFlash 等脚本")]
+    [Tooltip("Hit flash duration in seconds; pair with HitFlash-style scripts.")]
     public float hitFlashDuration = 0.1f;
 
-    [Tooltip("受击音效（不填则不播放）")]
+    [Tooltip("Hit sound (optional).")]
     public AudioClip hitSfx;
 
-    [Header("死亡")]
-    [Tooltip("死亡后延迟多少秒销毁本物体（含 Boss）；给死亡动画留出时间。0 表示尽快销毁（约下一帧末）。")]
+    [Header("Death")]
+    [Tooltip("Delay before destroying this object (includes Boss) so death anim can play. 0 destroys ASAP (next frame end).")]
     [Min(0f)]
     public float destroyDelayAfterDeath = 2f;
 
-    [Header("动画参数名（需与 Animator 中的参数一致）")]
-    [Tooltip("Float 参数，用于 Idle/Run 切换，通常为移动速度")]
+    [Header("Animator param names (match Controller)")]
+    [Tooltip("Float, usually magnitude for Idle/Run blend.")]
     public string animParamSpeed = "Speed";
 
-    [Tooltip("Bool 参数，死亡时设为 true")]
+    [Tooltip("Bool, true when dead.")]
     public string animParamIsDead = "IsDead";
 
-    [Tooltip("Trigger 参数，受伤时触发")]
+    [Tooltip("Trigger on hurt.")]
     public string animTriggerHit = "Hit";
 
 
-    // ==================== 二、组件引用（运行时获取） ====================
+    // ==================== Cached components ====================
 
-    /// <summary>玩家 Transform，Awake 时通过 Tag="Player" 查找</summary>
+    /// <summary>Player transform; found in Awake via Tag Player.</summary>
     protected Transform player;
 
-    /// <summary>2D 刚体，用于移动和击退</summary>
+    /// <summary>2D body for move and knockback.</summary>
     protected Rigidbody2D rb;
 
-    /// <summary>Animator，通常挂在子物体（如 Sprite）上</summary>
+    /// <summary>Animator, often on a child (sprite).</summary>
     protected Animator animator;
 
-    /// <summary>生命组件</summary>
+    /// <summary>Health component.</summary>
     protected Health health;
 
 
-    // ==================== 三、运行时状态 ====================
+    // ==================== Runtime state ====================
 
-    /// <summary>攻击冷却剩余时间，≤0 时可再次攻击</summary>
+    /// <summary>Attack cooldown remaining; can attack when &lt;= 0.</summary>
     protected float attackCooldownTimer;
 
-    /// <summary>是否已死亡（子类状态机转换条件可访问）</summary>
+    /// <summary>Dead flag for state machine transitions.</summary>
     public bool isDead { get; protected set; }
 
-    /// <summary>最近一次受到的伤害信息（用于击退方向和力度）</summary>
+    /// <summary>Last damage info for knockback direction/strength</summary>
     protected DamageInfo lastDamageInfo;
 
-    /// <summary>是否有有效的 lastDamageInfo</summary>
+    /// <summary>Whether <see cref="lastDamageInfo"/> is valid this hit.</summary>
     protected bool hasLastDamageInfo;
 
-    /// <summary>是否因玩家挑衅或被打而优先追击玩家（后续可扩展城墙等目标）</summary>
+    /// <summary>Prefer player when taunted or damaged (walls etc. can extend later).</summary>
     protected bool playerAggroActive;
 
-    /// <summary>击退后 AI 暂停接管速度剩余时间（<see cref="knockbackMovementPauseDuration"/>）。</summary>
+    /// <summary>Time left on knockback pause (<see cref="knockbackMovementPauseDuration"/>).</summary>
     protected float knockbackMovementPauseTimer;
 
 
-    // ==================== 四、Unity 生命周期 ====================
+    // ==================== Unity lifecycle ====================
 
     /// <summary>
-    /// 初始化：获取组件、查找玩家。
-    /// 子类如需扩展，请先调用 base.Awake()。
+    /// Grabs components and finds the player.
+    /// Subclasses: call base.Awake() first if overriding.
     /// </summary>
     protected virtual void Awake()
     {
@@ -142,14 +142,14 @@ public abstract class EnemyBase : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         health = GetComponent<Health>();
 
-        // 通过 Tag 查找玩家（请确保 Player 物体的 Tag 设为 "Player"）
+        // Find by Tag (set the player object's Tag to "Player").
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
             player = playerObj.transform;
     }
 
     /// <summary>
-    /// 子类若实现 Start，请先调用 base.Start()，以便自动解析 Primary Target。
+    /// Resolves Primary Target. Subclasses overriding Start should call base.Start().
     /// </summary>
     protected virtual void Start()
     {
@@ -157,7 +157,7 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 未手动指定 Primary Target 时：优先 <see cref="BaseTarget"/>，否则按 Tag 查找。
+    /// When primaryTarget is unset: prefer <see cref="BaseTarget"/>, else Tag lookup.
     /// </summary>
     protected void ResolvePrimaryTarget()
     {
@@ -180,12 +180,12 @@ public abstract class EnemyBase : MonoBehaviour
         }
         catch (UnityException)
         {
-            // Tag 未在项目中定义时忽略
+            // Tag not defined in project — ignore.
         }
     }
 
     /// <summary>
-    /// 启用时：订阅 Health 的受伤和死亡事件。
+    /// Subscribe to Health damage/death.
     /// </summary>
     protected virtual void OnEnable()
     {
@@ -198,7 +198,7 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 禁用时：取消订阅，避免重复绑定。
+    /// Unsubscribe to avoid duplicate handlers.
     /// </summary>
     protected virtual void OnDisable()
     {
@@ -211,47 +211,41 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 每帧：更新攻击冷却、执行 AI 决策、更新动画参数。
+    /// Tick cooldown, run AI, push animator params.
     /// </summary>
     protected virtual void Update()
     {
         if (isDead) return;
 
-        // 攻击冷却倒计时
+        // Attack cooldown
         if (attackCooldownTimer > 0f)
             attackCooldownTimer -= Time.deltaTime;
 
-        // 子类实现的 AI 逻辑（Idle/Chase/Attack 等）
+        // Subclass AI
         UpdateAI();
 
-        // 更新 Animator 参数（如 Speed）
+        // Animator (e.g. Speed)
         UpdateAnimatorParameters();
     }
 
 
-    // ==================== 五、子类必须实现的抽象方法 ====================
+    // ==================== Abstract API ====================
 
     /// <summary>
-    /// AI 决策入口。子类在此实现：
-    /// - 根据玩家距离决定 Idle / 追击 / 攻击 / 治疗
-    /// - 可调用 MoveTowardsPlayer()、StopMoving()、CanAttack()、PerformAttack()
+    /// AI entry: idle / chase / attack / heal from distances; may use MoveTowardsPlayer, StopMoving, CanAttack, PerformAttack.
     /// </summary>
     protected abstract void UpdateAI();
 
     /// <summary>
-    /// 具体攻击行为。子类在此实现：
-    /// - 近战：设置 Animator 的 AttackIndex，在动画事件中启用 Hitbox
-    /// - 远程：生成子弹 Prefab，朝玩家方向发射
-    /// - 治疗：给自己或队友加血，播放 Heal 动画
+    /// Attack implementation: melee anim + hitbox events, spawn projectile, self-heal + Heal anim, etc.
     /// </summary>
     protected abstract void PerformAttack();
 
 
-    // ==================== 六、动画与状态（可重写） ====================
+    // ==================== Animation (override as needed) ====================
 
     /// <summary>
-    /// 更新 Animator 参数。默认只设置 Speed。
-    /// 子类可重写以添加 AttackIndex、IsBlocking 等参数。
+    /// Default sets Speed only. Override for AttackIndex, IsBlocking, etc.
     /// </summary>
     protected virtual void UpdateAnimatorParameters()
     {
@@ -260,11 +254,10 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
 
-    // ==================== 七、受伤与死亡处理 ====================
+    // ==================== Damage & death ====================
 
     /// <summary>
-    /// Health 受伤事件回调（只有伤害数值）。
-    /// 用于播放受击表现，击退在 OnDamagedWithInfo 中处理。
+    /// Health OnDamaged (amount only): hit feedback; knockback uses OnDamagedWithInfo.
     /// </summary>
     protected virtual void OnDamaged(float dmg)
     {
@@ -273,8 +266,7 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// Health 受伤事件回调（完整 DamageInfo）。
-    /// 用于存储击退信息，并在本帧应用击退。
+    /// Health OnDamagedWithInfo: store knockback and apply this frame.
     /// </summary>
     protected virtual void OnDamagedWithInfo(DamageInfo info)
     {
@@ -287,25 +279,25 @@ public abstract class EnemyBase : MonoBehaviour
             ApplyKnockbackFromLastDamage();
     }
 
-    /// <summary>默认每次受击都击退；有架势时可重写为仅破防时击退。</summary>
+    /// <summary>Default: always knock back; override e.g. only on posture break.</summary>
     protected virtual bool ShouldApplyKnockbackFromDamage(DamageInfo info) => true;
 
     /// <summary>
-    /// Health 死亡事件回调。
+    /// Health OnDeath.
     /// </summary>
     protected virtual void OnDeath()
     {
         isDead = true;
         knockbackMovementPauseTimer = 0f;
 
-        // 停止移动
+        // Stop
         rb.linearVelocity = Vector2.zero;
 
-        // 播放死亡动画
+        // Death anim
         if (animator != null && !string.IsNullOrEmpty(animParamIsDead))
             animator.SetBool(animParamIsDead, true);
 
-        // 关闭碰撞，避免尸体挡路
+        // Disable collider so corpse does not block
         var col = GetComponent<Collider2D>();
         if (col != null) col.enabled = false;
 
@@ -313,8 +305,7 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 受击表现：触发 Hit 动画、播放音效。
-    /// 闪白效果可配合单独的 HitFlash 脚本实现。
+    /// Hit anim + SFX; flash via separate HitFlash-style component if desired.
     /// </summary>
     protected virtual void PlayHitEffects()
     {
@@ -326,8 +317,7 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 根据最近一次 DamageInfo 应用击退。
-    /// 使用速度叠加；<see cref="DamageInfo.knockbackForce"/> 为叠到速度上的量（世界单位/秒，再乘 <see cref="knockbackResistance"/> 因子），不除以 Rigidbody2D.mass。
+    /// Apply knockback from last DamageInfo: add to velocity; knockbackForce is world units/sec scaled by <see cref="knockbackResistance"/>, not divided by mass.
     /// </summary>
     protected virtual void ApplyKnockbackFromLastDamage()
     {
@@ -346,17 +336,17 @@ public abstract class EnemyBase : MonoBehaviour
         knockbackMovementPauseTimer = Mathf.Max(knockbackMovementPauseTimer, knockbackMovementPauseDuration);
     }
 
-    /// <summary>每帧递减击退暂停计时（状态机 Update 开头调用）。</summary>
+    /// <summary>Decrement knockback pause (call at start of state machine Update).</summary>
     protected void TickKnockbackMovementPause(float deltaTime)
     {
         if (knockbackMovementPauseTimer > 0f)
             knockbackMovementPauseTimer -= deltaTime;
     }
 
-    /// <summary>击退暂停期间不应由 AI 写入速度或 StopMoving 归零。</summary>
+    /// <summary>While true, AI should not write velocity or zero it in StopMoving.</summary>
     protected bool IsKnockbackPausingMovement => knockbackMovementPauseTimer > 0f;
 
-    /// <summary>朝世界坐标点移动（与 <see cref="moveSpeed"/> 一致）；击退暂停期间跳过。</summary>
+    /// <summary>Move toward a world point at <see cref="moveSpeed"/>; skipped during knockback pause.</summary>
     protected void MoveTowardsWorldPoint(Vector2 worldPoint)
     {
         Vector2 dir = worldPoint - (Vector2)transform.position;
@@ -372,11 +362,10 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
 
-    // ==================== 八、工具方法（供子类调用） ====================
+    // ==================== Helpers for subclasses ====================
 
-    /// <summary>玩家是否在指定范围内</summary>
-    /// <param name="range">范围半径</param>
-    /// <param name="sqrDist">输出：与玩家距离的平方（避免开方）</param>
+    /// <summary>Whether the player is within <paramref name="range"/>.</summary>
+    /// <param name="sqrDist">Squared distance to player (no sqrt).</param>
     protected bool IsPlayerInRange(float range, out float sqrDist)
     {
         sqrDist = float.MaxValue;
@@ -385,19 +374,19 @@ public abstract class EnemyBase : MonoBehaviour
         return sqrDist <= range * range;
     }
 
-    /// <summary>当前是否可以攻击（冷却已结束）</summary>
+    /// <summary>True when attack cooldown has elapsed.</summary>
     protected bool CanAttack()
     {
         return attackCooldownTimer <= 0f;
     }
 
-    /// <summary>重置攻击冷却</summary>
+    /// <summary>Reset attack cooldown timer.</summary>
     protected void ResetAttackCooldown()
     {
         attackCooldownTimer = attackCooldown;
     }
 
-    /// <summary>朝玩家方向移动</summary>
+    /// <summary>Move toward the player.</summary>
     protected void MoveTowardsPlayer()
     {
         if (player == null) return;
@@ -405,10 +394,10 @@ public abstract class EnemyBase : MonoBehaviour
         ApplyChaseVelocityFromDirection(dir);
     }
 
-    /// <summary>玩家作为追击目标时的距离上限（与脱战一致）。</summary>
+    /// <summary>Leash radius when focused on the player (matches disengage).</summary>
     protected float PlayerLeashRadius => maxPlayerEngageRange > 0f ? Mathf.Max(chaseRange, maxPlayerEngageRange) : chaseRange;
 
-    /// <summary>当前 AI 移动目标：优先仇恨玩家，否则首要目标（水晶），否则追击范围内的玩家。</summary>
+    /// <summary>Move focus: aggro player, else primary, else in-range player.</summary>
     public virtual Transform GetMoveTarget()
     {
         if (playerAggroActive && player != null)
@@ -424,7 +413,7 @@ public abstract class EnemyBase : MonoBehaviour
         return null;
     }
 
-    /// <summary>朝当前移动目标移动（水晶 / 玩家）</summary>
+    /// <summary>Chase current target (crystal or player).</summary>
     protected void MoveTowardsCurrentTarget()
     {
         var t = GetMoveTarget();
@@ -433,7 +422,7 @@ public abstract class EnemyBase : MonoBehaviour
         ApplyChaseVelocityFromDirection(dir);
     }
 
-    /// <summary>与当前移动目标的距离是否在攻击范围内</summary>
+    /// <summary>Current target within attack range.</summary>
     public bool IsCurrentTargetInAttackRange()
     {
         var t = GetMoveTarget();
@@ -442,13 +431,13 @@ public abstract class EnemyBase : MonoBehaviour
         return sqr <= attackRange * attackRange;
     }
 
-    /// <summary>用于 Idle/Move 切换：<see cref="moveStopDistance"/> 未设时用 <see cref="attackRange"/>。</summary>
+    /// <summary>Idle vs move: use <see cref="moveStopDistance"/> if set, else <see cref="attackRange"/>.</summary>
     public float GetEffectiveMoveStopDistance()
     {
         return moveStopDistance > 1e-4f ? moveStopDistance : attackRange;
     }
 
-    /// <summary>距离当前移动目标是否仍大于「停步距离」（需要继续追击）。</summary>
+    /// <summary>Still farther than stop distance from current move target.</summary>
     public bool IsCurrentTargetBeyondMoveStopDistance()
     {
         var t = GetMoveTarget();
@@ -459,7 +448,7 @@ public abstract class EnemyBase : MonoBehaviour
     }
 
     /// <summary>
-    /// 用于 Stay→Chase 等：首要目标时始终为 true；玩家目标时在追击半径内。
+    /// For Stay→Chase: always true for primary; for player, inside chase radius.
     /// </summary>
     public virtual bool IsCurrentTargetInChaseRange()
     {
@@ -470,7 +459,7 @@ public abstract class EnemyBase : MonoBehaviour
         return (t.position - transform.position).sqrMagnitude <= r * r;
     }
 
-    /// <summary>每帧更新：挑衅距离、脱战（子类在 Update 中调用）</summary>
+    /// <summary>Tick taunt range and leash (call from subclass Update).</summary>
     protected void UpdateAggroProvoke()
     {
         if (player == null) return;
@@ -494,7 +483,7 @@ public abstract class EnemyBase : MonoBehaviour
         return false;
     }
 
-    /// <summary>停止移动</summary>
+    /// <summary>Stop movement.</summary>
     protected void StopMoving()
     {
         if (rb == null) return;

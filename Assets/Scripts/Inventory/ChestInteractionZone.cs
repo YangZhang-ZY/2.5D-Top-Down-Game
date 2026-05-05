@@ -2,32 +2,33 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 箱子交互：<b>两只</b> <see cref="InventoryUI"/>（玩家背包面板 + 拷贝出来的箱子面板）同时打开/关闭，
-/// 两边格子用拖拽在玩家 <see cref="Inventory"/> 与箱子 <see cref="Inventory"/> 之间搬物品。
+/// Chest interaction: opens/closes <b>two</b> <see cref="InventoryUI"/> panels together (player bag + chest copy),
+/// with drag-and-drop moving items between the player <see cref="Inventory"/> and the chest <see cref="Inventory"/>.
 ///
-/// 配置：箱子物体上挂 <see cref="Inventory"/>（设 capacity/maxWeight）；挂本脚本；Collider2D 勾选 Is Trigger。
-/// UI：可在 Inspector 拖两只 <see cref="InventoryUI"/>；若为空则使用场景里 <see cref="InventoryUiRegistry"/>（推荐——建造的箱子 prefab 无法拖场景引用）。
-/// 打开箱子时会 <see cref="InventoryUI.BindStorageView"/> 绑定<strong>当前</strong>箱子的库存（多箱子共用一个箱子面板）。/// </summary>
+/// Setup: on the chest object add <see cref="Inventory"/> (capacity/maxWeight), this script, and a trigger Collider2D.
+/// UI: assign both <see cref="InventoryUI"/> references in the Inspector, or leave empty to use <see cref="InventoryUiRegistry"/> in the scene (recommended for built chest prefabs).
+/// Opening binds <see cref="InventoryUI.BindStorageView"/> to the <strong>current</strong> chest (multiple chests share one chest panel).
+/// </summary>
 public class ChestInteractionZone : MonoBehaviour
 {
-    [Header("箱子数据")]
+    [Header("Chest data")]
     [SerializeField] Inventory chestInventory;
 
-    [Header("两只 UI 面板")]
-    [Tooltip("玩家背包对应的 InventoryUI（Player Inventory 上的字段都绑玩家 Inventory）。")]
+    [Header("Two UI panels")]
+    [Tooltip("Player-bag InventoryUI (player Inventory fields all reference the player Inventory).")]
     [SerializeField] InventoryUI playerBagInventoryUI;
 
-    [Tooltip("箱子专用的 InventoryUI（两条 Inventory 引用都绑本箱子的 Inventory）。")]
+    [Tooltip("Chest-only InventoryUI (both Inventory references point at this chest's Inventory).")]
     [SerializeField] InventoryUI chestInventoryUI;
 
-    [Tooltip("例如 Player/Interact 或 Build（E）。")]
+    [Tooltip("e.g. Player/Interact or Build (E).")]
     [SerializeField] InputActionReference interactAction;
 
     [Header("Filter")]
     [SerializeField] string playerTag = "Player";
 
     [Header("Leave zone")]
-    [Tooltip("离开触发区时，若箱子面板仍开着则同时关掉两只面板。")]
+    [Tooltip("When leaving the trigger, close both panels if the chest UI is still open.")]
     [SerializeField] bool closePanelsWhenPlayerLeaves = true;
 
     bool _playerInRange;
@@ -38,9 +39,9 @@ public class ChestInteractionZone : MonoBehaviour
             chestInventory = GetComponent<Inventory>() ?? GetComponentInChildren<Inventory>();
 
         if (chestInventory == null)
-            Debug.LogWarning("[ChestInteractionZone] 请在箱子上挂 Inventory 组件。", this);
+            Debug.LogWarning("[ChestInteractionZone] Add an Inventory component on the chest.", this);
         if (interactAction == null || interactAction.action == null)
-            Debug.LogWarning("[ChestInteractionZone] 指定交互键 Input Action。", this);
+            Debug.LogWarning("[ChestInteractionZone] Assign an interact Input Action.", this);
     }
 
     void Start()
@@ -55,9 +56,9 @@ public class ChestInteractionZone : MonoBehaviour
         }
 
         if (playerBagInventoryUI == null)
-            Debug.LogWarning("[ChestInteractionZone] 指定玩家背包 InventoryUI，或在场景里添加 InventoryUiRegistry。", this);
+            Debug.LogWarning("[ChestInteractionZone] Assign player bag InventoryUI or add InventoryUiRegistry to the scene.", this);
         if (chestInventoryUI == null)
-            Debug.LogWarning("[ChestInteractionZone] 指定箱子 InventoryUI，或在场景里添加 InventoryUiRegistry。", this);
+            Debug.LogWarning("[ChestInteractionZone] Assign chest InventoryUI or add InventoryUiRegistry to the scene.", this);
     }
 
     void OnEnable()

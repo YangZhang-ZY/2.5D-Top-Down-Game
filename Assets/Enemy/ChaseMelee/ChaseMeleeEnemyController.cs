@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// Melee chaser aligned with <see cref="WarriorController"/> flow: Idle (decision) → Chase → Attack (one swing) → Recovery → Idle.
 /// <see cref="EnemyBase.GetMoveTarget"/> handles crystal vs player; provoke / aggro on <see cref="EnemyBase"/>.
-/// Animator: bool Attack; bool Recovery; trigger Hit; 可选 bool Stunned（眩晕 Loop，见 animParamStunned）; bool IsDead; float FaceX.
+/// Animator: bool Attack; bool Recovery; trigger Hit; optional bool Stunned (stun loop, see animParamStunned); bool IsDead; float FaceX.
 /// Events: OnChaseMeleeAttackHit (strike), OnChaseMeleeAttackEnd (clip end → Recovery state).
 /// </summary>
 [RequireComponent(typeof(Health), typeof(Rigidbody2D))]
@@ -18,7 +18,7 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     [Tooltip("AttackHitbox forward offset.")]
     public float attackHitboxOffset = 0.5f;
 
-    [Tooltip("玩家被命中时叠到 linearVelocity 上的击退速度（单位/秒），乘玩家侧抗性若有；与质量无关。")]
+    [Tooltip("Knockback speed added to player linearVelocity on hit (world units/sec), scaled by player resistance if any; mass-independent.")]
     public float attackKnockbackForce = 2f;
 
     [Tooltip("Hitbox auto-disable after this many seconds.")]
@@ -32,10 +32,10 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     public float recoveryStateDuration = 0.5f;
 
     [Header("Chase melee — hit stun")]
-    [Tooltip("破防后在 Hit 状态锁定的秒数 = 眩晕/硬直时长；与 Animator 里 Stunned 为 true 的时长一致。")]
+    [Tooltip("Seconds locked in Hit after posture break = stun/hitstun; match Animator Stunned=true clip length.")]
     public float hitStunDuration = 0.25f;
 
-    [Tooltip("可选：眩晕持续状态用 Bool（如 Loop 眩晕动画）。在 Hit 状态 Enter 为 true，Leave Hit 进 Recovery 前为 false。留空则只用 Hit Trigger。")]
+    [Tooltip("Optional: Bool for held stun (e.g. loop stun). True on Hit enter, false before Recovery after Hit. Empty uses Hit trigger only.")]
     public string animParamStunned = "";
 
     [Header("Chase melee — animator")]
@@ -92,7 +92,7 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
     }
 
     /// <summary>
-    /// 未激怒时：优先走向离自己最近的 <see cref="EnemyPrimitiveAttackTarget"/>（墙/塔/水晶等），否则再沿用首要目标与玩家追击逻辑。
+    /// When not aggroed: prefer nearest <see cref="EnemyPrimitiveAttackTarget"/> (wall/turret/crystal), else primary target / player chase rules.
     /// </summary>
     public override Transform GetMoveTarget()
     {
@@ -132,7 +132,7 @@ public class ChaseMeleeEnemyController : StatefulEnemyControllerBase<ChaseMeleeE
         return (t.position - transform.position).sqrMagnitude <= r * r;
     }
 
-    /// <summary>仅当从 <see cref="ChaseMeleeHitState"/> 进入下一次 Recovery 时在 Exit 补满架势。</summary>
+    /// <summary>Refill posture on Recovery exit only when entering Recovery from <see cref="ChaseMeleeHitState"/>.</summary>
     public bool NextRecoveryShouldRefillPosture { get; set; }
 
     public CombatPosture Posture => _posture;

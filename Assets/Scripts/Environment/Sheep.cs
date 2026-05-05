@@ -1,40 +1,40 @@
 using UnityEngine;
 
 /// <summary>
-/// 在出生点周围 <see cref="roamRadius"/> 内随机选点移动；到达后停留 <see cref="roamIdleDuration"/> 再选下一点（可关循环）。
-/// 适用于 2D XY + <see cref="Rigidbody2D"/>（与玩家一致）。
+/// Random target inside <see cref="roamRadius"/> around spawn; after arriving, waits <see cref="roamIdleDuration"/> then picks another (optional loop).
+/// 2D XY + <see cref="Rigidbody2D"/>, same idea as the player.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class Sheep : MonoBehaviour
 {
     [Header("Roam")]
-    [Tooltip("活动范围：相对出生点的半径（米），目标点在圆盘内随机。")]
+    [Tooltip("Radius (meters) around spawn; targets are random in that disk.")]
     [Min(0.1f)]
     public float roamRadius = 10f;
 
-    [Tooltip("到达当前目标后停顿多久（秒）再去下一个随机点；仅在 Repeat Roam 开启时有效。")]
+    [Tooltip("Seconds to idle at the current point before the next wander; only when Repeat Roam is on.")]
     [Min(0f)]
     public float roamIdleDuration = 2f;
 
-    [Tooltip("为 true：停顿结束后继续在下一点漫游；为 false：第一次到达目标后永远停下。")]
+    [Tooltip("If true: after idling, wander again. If false: stop forever after the first arrival.")]
     public bool repeatRoam = true;
 
-    [Tooltip("移动速度（单位/秒）。")]
+    [Tooltip("Move speed (world units per second).")]
     [Min(0f)]
     public float moveSpeed = 2f;
 
-    [Tooltip("距目标小于此距离时视为到达。")]
+    [Tooltip("Treat as arrived when closer than this distance to the target.")]
     [Min(0.01f)]
     public float stopDistance = 0.15f;
 
     [Header("Optional")]
-    [Tooltip("非空时根据速度写入 Animator Float（如 Speed）。")]
+    [Tooltip("If set, drives an Animator float (e.g. Speed) from movement speed.")]
     public Animator animator;
 
-    [Tooltip("非空时根据速度写入 Animator Float；**须与 Animator 窗口里参数名完全一致**（区分大小写）。留空则不写 Animator。")]
+    [Tooltip("Animator float parameter name — must match the Controller exactly (case-sensitive). Empty = do not write.")]
     public string animatorSpeedParam = "";
 
-    [Tooltip("为 true：移动时按水平速度翻转 localScale.x（面向左右）。")]
+    [Tooltip("If true, flip localScale.x by horizontal movement (face left/right).")]
     public bool flipScaleXByVelocity = true;
 
     Rigidbody2D _rb;
@@ -89,7 +89,6 @@ public class Sheep : MonoBehaviour
             return;
         }
 
-        // Moving
         Vector2 pos = _rb.position;
         Vector2 delta = _target - pos;
         if (delta.sqrMagnitude <= stopDistance * stopDistance)
@@ -156,7 +155,7 @@ public class Sheep : MonoBehaviour
         }
     }
 
-    /// <summary>更换 Animator / Controller 后可调用，重新解析 <see cref="animatorSpeedParam"/>。</summary>
+    /// <summary>Call after swapping Animator / controller to re-resolve <see cref="animatorSpeedParam"/>.</summary>
     public void InvalidateAnimatorSpeedParameterCache()
     {
         _speedParamCache = SpeedParamCache.Unchecked;

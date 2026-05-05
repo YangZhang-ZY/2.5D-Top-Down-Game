@@ -3,15 +3,15 @@ using StateMachine;
 using UnityEngine;
 
 /// <summary>
-/// Boss：Patrol（固定半径内随机巡逻）→ 发现玩家后以玩家为目标（不追基地）；Idle / Move、攻击、治疗、死亡。
-/// 动画：Bool Attack1、Attack2、Heal、Recovery；Trigger Hit（普通受击）；Bool IsDead；可选 FaceX / Speed。
+/// Boss: Patrol (random inside radius) → on player spotted, targets player only (not base); Idle / Move, attacks, heal, death.
+/// Animator: Bools Attack1, Attack2, Heal, Recovery; Trigger Hit; Bool IsDead; optional FaceX / Speed.
 /// </summary>
 [RequireComponent(typeof(Health), typeof(Rigidbody2D))]
 [DefaultExecutionOrder(1000)]
 public class BossController : StatefulEnemyControllerBase<BossController>
 {
     [Header("Victory")]
-    [Tooltip("勾选后 Boss 死亡时自动调用 VictoryManager.TriggerVictory()；也可只用 Health.OnDeath 绑定。")]
+    [Tooltip("If enabled, calls VictoryManager.TriggerVictory() on Boss death; can also wire Health.OnDeath instead.")]
     [SerializeField] bool triggerVictoryOnDeath = true;
 
     [Header("Boss — animator")]
@@ -19,41 +19,41 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     [SerializeField] string animParamAttack2 = "Attack2";
     [SerializeField] string animParamHeal = "Heal";
 
-    [Tooltip("可选，朝向混合树")]
+    [Tooltip("Optional facing blend tree parameter.")]
     [SerializeField] string animParamFaceX = "FaceX";
 
-    [Tooltip("Bool：攻击后摇（与 ChaseMelee Recovery 一致）")]
+    [Tooltip("Bool: post-attack recovery (same idea as ChaseMelee Recovery).")]
     [SerializeField] string animParamRecovery = "Recovery";
 
     [Header("Boss — attack recovery")]
-    [Tooltip("后摇锁定时间；动画可发 OnBossRecoveryEnd 提前结束")]
+    [Tooltip("Recovery lock duration; animation can fire OnBossRecoveryEnd early.")]
     public float recoveryStateDuration = 0.5f;
 
     [Header("Boss — attack 1")]
     public float attack1Damage = 2f;
-    [Tooltip("第二段判定伤害；≤0 则与第一段相同")]
+    [Tooltip("Second-segment damage; ≤0 uses first-segment value.")]
     public float attack1Hit2Damage = 0f;
 
-    [Tooltip("若动画未发 OnBossAttackEnd，超过此秒数强制回到 Idle")]
+    [Tooltip("If OnBossAttackEnd never fires, force Idle after this many seconds.")]
     public float attack1AnimSafetyTimeout = 2f;
 
     public float attack1Knockback = 3f;
-    [Tooltip("第二段击退；≤0 则与第一段相同")]
+    [Tooltip("Second-segment knockback; ≤0 uses first-segment value.")]
     public float attack1Hit2Knockback = 0f;
 
-    [Tooltip("每次命中帧时沿攻击方向小位移（米）")]
+    [Tooltip("Small nudge along attack direction on each hit frame (meters).")]
     public float attack1Displacement = 0.2f;
 
     [Header("Boss — attack 2")]
     public float attack2Damage = 3f;
-    [Tooltip("第二段伤害；≤0 则与第一段相同")]
+    [Tooltip("Second hit damage; ≤0 uses first hit.")]
     public float attack2Hit2Damage = 0f;
 
-    [Tooltip("若动画未发 OnBossAttackEnd，超过此秒数强制结束")]
+    [Tooltip("If OnBossAttackEnd never fires, force end after this many seconds.")]
     public float attack2AnimSafetyTimeout = 2f;
 
     public float attack2Knockback = 4f;
-    [Tooltip("第二段击退；≤0 则与第一段相同")]
+    [Tooltip("Second-segment knockback; ≤0 uses first-segment value.")]
     public float attack2Hit2Knockback = 0f;
 
     public float attack2Displacement = 0.2f;
@@ -61,22 +61,22 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     [Header("Boss — hitbox")]
     public AttackHitbox attackHitbox;
 
-    [Tooltip("朝右（FaceX ≥ 0）时：某段 Box Offset 为 0 则使用此前伸距离")]
+    [Tooltip("When facing right (FaceX ≥ 0), default forward offset if a segment Box Offset is 0.")]
     public float attackHitboxOffset = 0.7f;
 
-    [Tooltip("每段相对「朝向目标」方向的平面旋转角（度），逆时针为正；击退方向与此一致")]
+    [Tooltip("Per-segment yaw in the plane vs face-toward-target (degrees, CCW+); knockback matches this.")]
     public float attack1Hit1AngleDeg;
     public float attack1Hit2AngleDeg;
     public float attack2Hit1AngleDeg;
     public float attack2Hit2AngleDeg;
 
-    [Tooltip("朝右时该段 Hitbox 沿当前攻击方向平移的距离；0 则用 attackHitboxOffset")]
+    [Tooltip("When facing right, slide hitbox this far along attack dir; 0 falls back to attackHitboxOffset.")]
     public float attack1Hit1BoxOffset;
     public float attack1Hit2BoxOffset;
     public float attack2Hit1BoxOffset;
     public float attack2Hit2BoxOffset;
 
-    [Tooltip("朝左（FaceX < 0）时：某段专用左 offset 为 0 时，先用对应「朝右段值」，再用 attackHitboxOffsetLeft / attackHitboxOffset")]
+    [Tooltip("When facing left, if segment left offset is 0, use matching right value then attackHitboxOffsetLeft / attackHitboxOffset.")]
     public float attackHitboxOffsetLeft;
 
     public float attack1Hit1BoxOffsetLeft;
@@ -84,32 +84,32 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     public float attack2Hit1BoxOffsetLeft;
     public float attack2Hit2BoxOffsetLeft;
 
-    [Tooltip("每次 EnableHitbox 后自动关闭碰撞体前的秒数（多段攻击每段会重设计时）")]
+    [Tooltip("Seconds before auto-disabling collider after each EnableHitbox (per combo segment retimes).")]
     public float attackHitboxActiveDuration = 0.25f;
 
     [Header("Boss — heal")]
-    [Tooltip("单次治疗状态内累计回复总量（分多段加血）")]
+    [Tooltip("Total heal budget for one heal state (applied in ticks).")]
     public int healAmount = 20;
 
-    [Tooltip("每一段实际调用 Health.Heal 的数值；最后一段会补足剩余量")]
+    [Tooltip("Each tick calls Health.Heal by this amount; last tick tops up remainder.")]
     [Min(1)]
     public int healPerTick = 5;
 
-    [Tooltip("两次加血间隔（秒）。≤0 时用 healStateDuration 在整次治疗内均分")]
+    [Tooltip("Seconds between heal ticks. ≤0 spreads evenly across healStateDuration.")]
     public float healTickInterval = 0.25f;
 
-    [Tooltip("治疗动画/硬直时长（秒）")]
+    [Tooltip("Heal anim / lock duration (seconds).")]
     public float healStateDuration = 1.2f;
     public float healCooldown = 10f;
     [Range(0f, 1f)] public float healHpThreshold = 0.55f;
 
-    [Tooltip("可选：挂到 Boss 子物体（脚底/胸口）；空则用本物体 Transform")]
+    [Tooltip("Optional child anchor (feet/chest); empty uses this transform.")]
     public Transform healEffectAnchor;
 
-    [Tooltip("进入治疗时在场景中生成；退出治疗、死亡或销毁 Boss 时删除实例（或脱钩后延迟删，见 destroyHealEffectWhenLeavingHealState）")]
+    [Tooltip("Spawned when entering heal; removed on exit heal, death, or Boss destroy (or detach+delay, see destroyHealEffectWhenLeavingHealState).")]
     public GameObject healEffectPrefab;
 
-    [Tooltip("为 true：退出治疗状态时立刻 Destroy 特效。为 false：脱离 Boss 父节点，按粒子时长延迟 Destroy（易看见特效）。")]
+    [Tooltip("True: Destroy VFX immediately when leaving heal. False: unparent and Destroy after particle lifetime (more visible).")]
     [SerializeField] bool destroyHealEffectWhenLeavingHealState;
 
     [Header("Boss — AI weights (same state, random pick)")]
@@ -118,28 +118,34 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     public float healWeight = 0.5f;
 
     [Header("Boss — patrol & combat start")]
-    [Tooltip("巡逻圆心；空则用 Boss 在 Awake 时的世界坐标（固定点）。")]
+    [Tooltip("Patrol region center; empty uses Boss world position at Awake.")]
     [SerializeField] Transform patrolRegionCenter;
 
-    [Tooltip("绕巡逻圆心随机走的半径（米）。")]
+    [Tooltip("Random wander radius around patrol center (meters).")]
     [Min(0.5f)]
     public float patrolRadius = 20f;
 
-    [Tooltip("与巡逻点的距离小于该值则视为到达，之后停顿一段时间再选下一点。")]
+    [Tooltip("Treat waypoint reached inside this distance; then pause before picking next.")]
     [Min(0.05f)]
     public float patrolWaypointReach = 0.45f;
 
-    [Tooltip("到达巡逻点后静止的秒数，再选取下一个巡逻点。")]
+    [Tooltip("Idle seconds at a waypoint before choosing the next.")]
     [Min(0f)]
     public float patrolPauseAtWaypointDuration = 10f;
 
-    [Tooltip("玩家进入该距离后 Boss 进入战斗并开始追击/攻击；之后不再回巡逻。")]
+    [Tooltip("Player within this radius engages combat; Boss stops patrolling after.")]
     [Min(0.5f)]
     public float playerDetectRadius = 20f;
 
     [Header("Boss — chase player")]
-    [Tooltip("与 chaseRange 取较大值作为追击玩家时的脱战/牵引距离上限。")]
+    [Tooltip("With chaseRange, use the larger value as player leash / disengage radius.")]
     [SerializeField] float arenaPlayerLeashRange = 24f;
+
+    [Header("Boss — aggro audio")]
+    [Tooltip("Played once when the Boss spots the player or takes damage and starts chasing (combat engage).")]
+    [SerializeField] AudioClip chaseEngageClip;
+
+    [SerializeField] [Range(0f, 1f)] float chaseEngageVolume = 1f;
 
     float _faceX = 1f;
     float _healCooldownTimer;
@@ -150,7 +156,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     float _patrolWaitTimer;
     bool _bossCombatEngaged;
 
-    /// <summary>玩家已进入战斗流程（发现或被攻击）；状态机用它从 Patrol 切入 Idle。</summary>
+    /// <summary>Combat started (spotted or damaged); state machine uses this to leave Patrol for Idle.</summary>
     public bool BossCombatEngaged => _bossCombatEngaged;
 
     BossStatePatrol _patrolState;
@@ -214,7 +220,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     {
         base.Start();
         CaptureRigidbodyConstraintsTargetForChase();
-        // 其它组件可能在 Awake 之后又写回 Constraints；再清一次避免「有速度但拉不开距离」
+        // Other components may restore constraints after Awake; enforce again so velocity can separate bodies.
         EnsureRigidbodyPositionNotFrozenForChase();
     }
 
@@ -223,8 +229,8 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     RigidbodyConstraints2D _rbConstraintsAfterPositionUnfreeze;
 
     /// <summary>
-    /// 其它组件可能在 Awake/Start 之后把 Freeze Position 写回。
-    /// 在 FixedUpdate 再 enforce，保证本帧物理积分前约束正确。
+    /// Other scripts may re-enable Freeze Position after Awake/Start.
+    /// Re-apply in FixedUpdate before the physics step.
     /// </summary>
     void EnforceRigidbodyPositionUnfrozen()
     {
@@ -240,7 +246,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
     }
 
     /// <summary>
-    /// 未开战：不追水晶、不追玩家（由 Patrol 状态自己走位）。开战：只追玩家。
+    /// Before combat: do not chase crystal or player (Patrol handles motion). In combat: chase player only.
     /// </summary>
     public override Transform GetMoveTarget()
     {
@@ -265,7 +271,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
 
         _stateMachine.AddTransition(_patrolState, _idleState, ctx => ctx.BossCombatEngaged);
 
-        // 必须先于攻击/治疗：否则 attackRange 很大时每帧 wantsAttack 先成立，永远不会进入 Move
+        // Move before attack/heal: large attackRange would keep wantsAttack true every frame otherwise.
         _stateMachine.AddTransition(_idleState, _moveState, ctx =>
             ctx.GetMoveTarget() != null
             && ctx.IsCurrentTargetBeyondMoveStopDistance()
@@ -368,7 +374,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
         _patrolDestination = anchor + (Vector2)(Random.insideUnitCircle * patrolRadius);
     }
 
-    /// <summary>进入巡逻状态时调用：清除停顿计时并选点。</summary>
+    /// <summary>Called when entering patrol: clear wait timer and pick a point.</summary>
     public void ResetPatrolWaitAndPickDestination()
     {
         _patrolWaitTimer = 0f;
@@ -478,16 +484,16 @@ public class BossController : StatefulEnemyControllerBase<BossController>
             attackFinished = true;
     }
 
-    /// <summary>动画事件：攻击1 第一段。</summary>
+    /// <summary>Anim event: attack 1, first hit.</summary>
     public void OnBossAttack1Hit() => PerformBossAttackHit(true, secondSegment: false);
 
-    /// <summary>动画事件：攻击1 第二段（同一条攻击动画上再挂一个 Event）。</summary>
+    /// <summary>Anim event: attack 1, second hit (second event on same clip).</summary>
     public void OnBossAttack1Hit2() => PerformBossAttackHit(true, secondSegment: true);
 
-    /// <summary>动画事件：攻击2 第一段。</summary>
+    /// <summary>Anim event: attack 2, first hit.</summary>
     public void OnBossAttack2Hit() => PerformBossAttackHit(false, secondSegment: false);
 
-    /// <summary>动画事件：攻击2 第二段（可选）。</summary>
+    /// <summary>Anim event: attack 2, second hit (optional).</summary>
     public void OnBossAttack2Hit2() => PerformBossAttackHit(false, secondSegment: true);
 
     void PerformBossAttackHit(bool isAttack1, bool secondSegment)
@@ -605,7 +611,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
             _healRoutine = StartCoroutine(CoGradualHeal());
     }
 
-    /// <summary>离开治疗状态：停分段加血；按 <see cref="destroyHealEffectWhenLeavingHealState"/> 处理特效。</summary>
+    /// <summary>Leaving heal: stop tick heal; VFX per <see cref="destroyHealEffectWhenLeavingHealState"/>.</summary>
     public void EndHealStateCleanup()
     {
         StopHealRoutine();
@@ -615,7 +621,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
             DetachHealEffectScheduledDestroy();
     }
 
-    /// <summary>死亡或 Boss 销毁：必定立刻停加血并删掉特效实例。</summary>
+    /// <summary>Death or destroy: always stop heal ticks and remove heal VFX.</summary>
     public void CleanupBossHeal()
     {
         StopHealRoutine();
@@ -638,14 +644,14 @@ public class BossController : StatefulEnemyControllerBase<BossController>
         Vector3 pos = anchor != null ? anchor.position : transform.position;
         Quaternion rot = anchor != null ? anchor.rotation : transform.rotation;
 
-        // Anchor 若未勾选 Active，子节点会 activeInHierarchy=false，整棵特效不渲染；改挂到 Boss 根下并仍用 Anchor 的世界坐标。
+        // Inactive anchor makes children inactiveInHierarchy so VFX won't render; parent under Boss root but keep anchor world pose.
         Transform parentTransform = (anchor != null && anchor.gameObject.activeInHierarchy) ? anchor : transform;
 
         _healEffectInstance = Instantiate(healEffectPrefab, pos, rot, parentTransform);
         _healEffectInstance.name = healEffectPrefab.name + " (spawned)";
         _healEffectInstance.SetActive(true);
 
-        // 含未激活子物体；Prefab 根常保存为 Inactive
+        // Includes inactive children; prefab roots are often saved inactive.
         foreach (var ps in _healEffectInstance.GetComponentsInChildren<ParticleSystem>(true))
         {
             ps.gameObject.SetActive(true);
@@ -765,7 +771,7 @@ public class BossController : StatefulEnemyControllerBase<BossController>
         DisableAttackHitboxSafe();
     }
 
-    /// <summary>动画事件：后摇结束（片段末尾或提前收招）。</summary>
+    /// <summary>Anim event: recovery end (clip end or early cancel).</summary>
     public void OnBossRecoveryEnd()
     {
         if (_stateMachine == null) return;

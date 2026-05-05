@@ -2,8 +2,8 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Simple arc motion for world drops. Added at runtime by <see cref="ResourceNode"/> or placed on pickup prefabs.
-/// 抛物线「鼓起」方向默认取 <see cref="Camera.main"/> 的 up，这样 Q/E 旋转视角后视觉上仍是朝屏幕上方弹出，而不是死用世界 Y。
+/// Simple arc motion for world drops. Used by <see cref="ResourceNode"/> or on pickup prefabs.
+/// By default the arc bulge follows <see cref="Camera.main"/> up so Q/E camera rotation still pops "up" on screen instead of locking to world +Y.
 /// </summary>
 public class LootPopout : MonoBehaviour
 {
@@ -16,10 +16,10 @@ public class LootPopout : MonoBehaviour
     [Tooltip("Disable this component when the motion finishes.")]
     public bool disableWhenDone = true;
 
-    [Tooltip("为 true：抬升沿主摄像机 transform.up（推荐，与旋转视角一致）。为 false：始终用世界 Vector3.up（旧行为）。")]
+    [Tooltip("If true, lift along Camera.main up (recommended). If false, use world Vector3.up.")]
     public bool useCameraUpForArc = true;
 
-    [Tooltip("可选；不空时用作「朝上」方向（归一化），优先级高于主摄像机。")]
+    [Tooltip("Optional. If set, this transform's up is the arc direction (overrides camera).")]
     public Transform arcUpOverride;
 
     private Coroutine _routine;

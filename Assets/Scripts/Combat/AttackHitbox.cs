@@ -5,7 +5,7 @@ using System.Collections.Generic;
 /// Melee hit volume on a child of the attacker. Needs a Collider2D (forced Is Trigger in Awake).
 /// Each damageable root is damaged at most once per activation.
 ///
-/// Enable 后同一帧若已与目标重叠，Unity 有时不会发 OnTriggerEnter2D；因此在开启碰撞体后会立刻用 OverlapCollider 扫一遍。
+/// If already overlapping the same frame as enable, OnTriggerEnter2D may not fire; we sweep with OverlapCollider right after enabling.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class AttackHitbox : MonoBehaviour
@@ -15,7 +15,7 @@ public class AttackHitbox : MonoBehaviour
     public GameObject owner;
 
     [Header("Targeting (optional)")]
-    [Tooltip("勾选后：只伤害 Layer 在下列 Mask 内的碰撞体（用于区分 Default/Enemy/自定义 Building 等）。不勾选则与原先一致，按 IDamageable 命中。")]
+    [Tooltip("If enabled, only colliders in this layer mask (Default/Enemy/custom Building, etc.). If disabled, any IDamageable match applies (legacy behavior).")]
     [SerializeField] bool useHitLayerMask;
 
     [SerializeField] LayerMask hitLayers;

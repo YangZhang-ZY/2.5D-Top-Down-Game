@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Sets SpriteRenderer sortingOrder from pseudo depth so lower/further objects draw in front.
-/// 默认沿 <see cref="sortCamera"/> 的 <b>up</b> 轴在世界坐标里做点积（旋转正交相机后仍与画面纵深感一致）；
-/// 可切回仅使用世界 -Y（老行为）。
+/// Default: project depth using <see cref="sortCamera"/> <b>up</b> in world space (works when the ortho camera is rotated);
+/// can switch to plain world -Y (legacy).
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class SortByY : MonoBehaviour

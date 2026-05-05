@@ -5,9 +5,9 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 属性训练师 UI：消耗背包里的一种 <see cref="ItemData"/>（例如金币道具 Gold），四项各最多升 3 级，每次费用依次为 1、2、3 个该物品。
-/// 四个 TMP 仅显示当前等级数字；<see cref="goldText"/> 显示背包中该物品持有数量。
-/// <see cref="hpCostText"/> 等四个 TMP 由脚本写入「下次升级」所需 Gold 数量；已满级时显示 <see cref="costTextWhenMaxed"/>。
+/// Stat trainer UI: spends one <see cref="ItemData"/> from the bag (e.g. gold). Four stats cap at 3 tiers; cost is 1, 2, then 3 of that item per tier.
+/// Four TMPs show tier numbers only; <see cref="goldText"/> shows how many of that item the player holds.
+/// <see cref="hpCostText"/> and the other cost TMPs show the next tier's item cost; at max tier shows <see cref="costTextWhenMaxed"/>.
 /// </summary>
 public class StatTrainerUI : MonoBehaviour
 {
@@ -15,44 +15,44 @@ public class StatTrainerUI : MonoBehaviour
 
     static readonly int[] CostItemCountByTierIndex = { 1, 2, 3 };
 
-    [Header("目标（可空则自动找 Player）")]
+    [Header("Targets (optional; finds Player if empty)")]
     [SerializeField] PlayerController player;
     [SerializeField] Inventory inventory;
 
-    [Header("货币（背包中的 ItemData，例如 Gold.asset）")]
+    [Header("Currency (ItemData in bag, e.g. Gold.asset)")]
     [SerializeField] ItemData goldItem;
 
-    [Header("每项每级效果（可自行调）")]
+    [Header("Per-tier bonuses (tune as needed)")]
     [Min(1)] public int hpBonusPerLevel = 10;
     [Min(1)] public int inventorySlotsPerLevel = 1;
     public float moveSpeedBonusPerLevel = 0.15f;
     public float attackDamageBonusPerLevel = 0.25f;
 
-    [Header("等级数字（只填 TMP，说明文字自己做在场景里）")]
+    [Header("Tier numbers (TMP only; put labels in the scene)")]
     public TextMeshProUGUI hpLevelText;
     public TextMeshProUGUI inventorySlotLevelText;
     public TextMeshProUGUI speedLevelText;
     public TextMeshProUGUI attackDamageLevelText;
 
-    [Header("下次升级所需 Gold 数量（脚本写入，与费用表一致）")]
+    [Header("Next upgrade cost in gold items (written by script)")]
     public TextMeshProUGUI hpCostText;
     public TextMeshProUGUI inventorySlotCostText;
     public TextMeshProUGUI speedCostText;
     public TextMeshProUGUI attackDamageCostText;
 
-    [Tooltip("已满 3 级时，费用 TMP 上显示的内容（例如 — 或 已满）")]
+    [Tooltip("Shown on cost TMPs when tier 3 is reached (e.g. — or Max).")]
     [SerializeField] string costTextWhenMaxed = "—";
 
-    [Header("持有货币数量（显示背包里 goldItem 的数量）")]
+    [Header("Currency held (count of goldItem in bag)")]
     public TextMeshProUGUI goldText;
 
-    [Header("购买按钮")]
+    [Header("Purchase buttons")]
     public Button buyHpButton;
     public Button buyInventorySlotButton;
     public Button buySpeedButton;
     public Button buyAttackDamageButton;
 
-    [Header("背包 UI（可选）")]
+    [Header("Inventory UI (optional)")]
     [SerializeField] InventoryUI inventoryUI;
     [SerializeField] bool openInventoryWhenOpen = true;
     [SerializeField] bool closeInventoryWhenClose = true;
@@ -159,7 +159,7 @@ public class StatTrainerUI : MonoBehaviour
         if (player == null || inventory == null) return;
         if (goldItem == null || !goldItem.IsValid)
         {
-            Debug.LogWarning("[StatTrainerUI] 请指定 goldItem（背包货币 ItemData）。", this);
+            Debug.LogWarning("[StatTrainerUI] Assign goldItem (currency ItemData in bag).", this);
             return;
         }
 

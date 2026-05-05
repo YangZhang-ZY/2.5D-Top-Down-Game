@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 挂在菜单或 HUD 的 Canvas 根节点上：为本节点下所有子级 <see cref="Button"/> 增加点击音效，并可选自动挂上悬停缩放。
-/// 在 Build 里都放入对应场景的 Canvas 即可覆盖该界面所有按钮，无需逐个绑定。
+/// Put on a menu or HUD Canvas root: wires click sounds for all child <see cref="Button"/>s and optionally adds hover scale.
+/// Include on each scene's Canvas in builds to cover every button without per-button setup.
 /// </summary>
 public class UIGlobalButtonFeedback : MonoBehaviour
 {

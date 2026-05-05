@@ -15,7 +15,7 @@ public class TurretProjectile : MonoBehaviour
     [SerializeField] private float lifetime = 4f;
 
     [Header("Targeting (optional)")]
-    [Tooltip("勾选后：只伤害 Layer 在下列 Mask 内的碰撞体（与 AttackHitbox 相同；不勾选则按 IDamageable 命中，不按层过滤）。")]
+    [Tooltip("If enabled, only colliders whose layer is in this mask (same as AttackHitbox). If disabled, any IDamageable hit is not layer-filtered.")]
     [SerializeField] bool useHitLayerMask;
 
     [SerializeField] LayerMask hitLayers;

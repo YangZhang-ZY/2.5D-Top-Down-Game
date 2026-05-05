@@ -1,30 +1,30 @@
 using UnityEngine;
 
 /// <summary>
-/// 在岛心周围生成一圈圆形不可见的 <see cref="EdgeCollider2D"/>（闭合折线近似圆），防止角色/敌人走出范围。
-/// 以本物体 <see cref="Transform.position"/> 为圆心，可走区域为圆内，边界在 <see cref="islandRadius"/>。
-/// Scene Gizmo：绿色为可走边界圆，橙色为墙厚外沿示意。
+/// Builds an invisible circular <see cref="EdgeCollider2D"/> ring (closed polyline) around the island center to block actors leaving.
+/// Uses this object's <see cref="Transform.position"/> as center; walkable inside <see cref="islandRadius"/>.
+/// Scene gizmo: green = walk bounds circle, orange = outer wall thickness hint.
 /// </summary>
 [DisallowMultipleComponent]
 public class IslandAirWallRing2D : MonoBehaviour
 {
-    [Tooltip("空气墙所在圆的半径（从岛心到墙中心线，世界单位）。原 90×90 方岛可取半宽 45 作近似内接圆。")]
+    [Tooltip("Circle radius from island center to wall centerline (world units). A 90×90 square island can use half-edge ~45 as inscribed circle.")]
     [Min(0.1f)]
     public float islandRadius = 45f;
 
-    [Tooltip("EdgeCollider2D 的 edgeRadius，加厚边线减少高速穿模；可视作墙厚的一半量级。")]
+    [Tooltip("EdgeCollider2D edgeRadius; thickens the edge to reduce high-speed tunneling; roughly half visible wall thickness.")]
     [Min(0.001f)]
     public float wallThickness = 1f;
 
-    [Tooltip("用多少段折线逼近圆，越大越圆，一般 32～64。")]
+    [Tooltip("Segments in the polyline circle; higher is smoother (typical 32–64).")]
     [Range(8, 128)]
     public int circleSegments = 48;
 
-    [Tooltip("运行时生成的子物体名称前缀。")]
+    [Tooltip("Prefix for runtime-generated child object names.")]
     public string childNamePrefix = "AirWall";
 
     [Header("Gizmos")]
-    [Tooltip("在 Scene 视图绘制边界圆（运行时/编辑时均显示）。")]
+    [Tooltip("Draw bounds circle in Scene view (edit and play modes).")]
     [SerializeField] bool drawGizmos = true;
 
     [SerializeField] Color gizmoIslandBoundsColor = new Color(0.2f, 0.9f, 0.4f, 0.95f);

@@ -2,71 +2,71 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 可破坏宝箱：<see cref="Health"/> 清零后播放开箱动画与音效，并在时间轴上陆续弹出掉落物，最后再销毁自身。
-/// 配置要点见各字段 Tooltip（Animator Trigger / State、destroyChestAfter、loot stagger、pop 数值）。
+/// Destructible chest: when <see cref="Health"/> dies, plays open animation + sound, spawns loot over time, then destroys self.
+/// See tooltips for Animator Trigger / State, <see cref="destroyChestAfter"/>, loot stagger, and pop tuning.
 /// </summary>
 [RequireComponent(typeof(Health))]
 public class TreasureChest : MonoBehaviour
 {
     [Header("Loot")]
-    [Tooltip("可掉落的预制体列表；同一预制体可多格拖入以增加权重。")]
+    [Tooltip("Loot prefabs; duplicate entries increase pick weight.")]
     [SerializeField] GameObject[] dropPrefabs;
 
-    [Tooltip("最少生成几个掉落实例。")]
+    [Tooltip("Minimum number of spawned instances.")]
     [Min(1)]
     public int dropCountMin = 1;
 
-    [Tooltip("最多生成几个掉落实例（含）。")]
+    [Tooltip("Maximum number of spawned instances (inclusive).")]
     [Min(1)]
     public int dropCountMax = 3;
 
     [Header("Spawn layout")]
     public Vector2 spawnOffset;
 
-    [Tooltip("多个掉落物生成点水平分散。")]
+    [Tooltip("Random spread between spawn positions.")]
     public float spawnSpread = 0.2f;
 
     [Header("Open sequence")]
-    [Tooltip("开箱动画。不拖则从自身或子物体上找 Animator。")]
+    [Tooltip("Open animation. If empty, uses Animator on self or children.")]
     [SerializeField] Animator chestAnimator;
 
-    [Tooltip("非空：animator.SetTrigger（Controller 里须建同名 Trigger）。")]
+    [Tooltip("If set: animator.SetTrigger (add matching Trigger in the Controller).")]
     [SerializeField] string openAnimatorTrigger = "";
 
-    [Tooltip("当 Trigger 留空且此项非空：animator.Play(层0，从开始播放该状态)")]
+    [Tooltip("If Trigger is empty and this is set: animator.Play on layer S0 from normalized 0.")]
     [SerializeField] string openAnimatorStateName = "";
 
-    [Tooltip("开箱瞬间播放的音效。")]
+    [Tooltip("One-shot sound when opening starts.")]
     [SerializeField] AudioClip openChestSound;
 
     [Range(0f, 1f)]
     [SerializeField] float openSoundVolume = 1f;
 
-    [Tooltip("若不指定，优先用本物体/子物体上的 AudioSource；否则用临时物体播放。")]
+    [Tooltip("Optional. Otherwise uses AudioSource on self/children, or a temporary source.")]
     [SerializeField] AudioSource openSoundSource;
 
-    [Tooltip("第一次掉落前等待（可与箱盖抬起对齐）。")]
+    [Tooltip("Delay before the first loot spawns (sync with lid).")]
     [Min(0f)]
     public float firstLootDelay = 0.12f;
 
-    [Tooltip("从第一件掉落到「开始生成」最后一件之间的时间跨度；只有 1 件时忽略。")]
+    [Tooltip("Time span from first to last loot spawn start; ignored when only one item.")]
     [Min(0f)]
     public float lootStaggerWindow = 0.55f;
 
-    [Tooltip("从死亡瞬间起多少秒后销毁宝箱物体。建议 ≥ 开箱动画时长，且 ≥ firstLootDelay + lootStaggerWindow，避免动画被截断。")]
+    [Tooltip("Seconds after death to destroy this object. Should be >= open anim length and >= firstLootDelay + lootStaggerWindow.")]
     [Min(0f)]
     public float destroyChestAfter = 1.35f;
 
-    [Header("Loot pop（比树/石更夸张时可加大弧高、时长、落点半径）")]
+    [Header("Loot pop (raise arc / duration / radius vs trees/rocks)")]
     public bool popOnSpawn = true;
 
-    [Tooltip("抛物线最高点额外高度（越大弹得越明显）。")]
+    [Tooltip("Arc peak height above the straight line.")]
     public float popArcHeight = 0.95f;
 
-    [Tooltip("从飞出到落地时间（秒）。")]
+    [Tooltip("Flight time in seconds.")]
     public float popDuration = 0.55f;
 
-    [Tooltip("落点相对生成点的随机半径（越大散得越开）。")]
+    [Tooltip("Random radius around spawn for landing.")]
     public float popLandRadius = 0.85f;
 
     [Header("On destroy (optional)")]

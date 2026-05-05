@@ -30,11 +30,11 @@ public class BuildingUpgrade : MonoBehaviour
 
     [SerializeField] private float fireRateBonusPerLevel = 0.25f;
 
-    [Tooltip("每次升级增加的最大生命（仅当同一物体上同时有 Turret 与 Health 时生效；与围墙分开配置）。")]
+    [Tooltip("Max HP gained per upgrade when both Turret and Health are on the same object (separate from wall tuning).")]
     [SerializeField] private int turretMaxHpBonusPerLevel = 15;
 
     [Header("Wall bonuses")]
-    [Tooltip("每次升级增加的最大生命（仅围墙：有 Health、无 Turret）。")]
+    [Tooltip("Max HP gained per upgrade for walls only (has Health, no Turret).")]
     [FormerlySerializedAs("maxHpBonusPerLevel")]
     [SerializeField] private int wallMaxHpBonusPerLevel = 25;
 
@@ -52,11 +52,11 @@ public class BuildingUpgrade : MonoBehaviour
     [SerializeField] private ItemData coinItem;
 
     [Header("BuildSite integration")]
-    [Tooltip("勾选后：不再使用本物体上的升级触发区与 Prompt，由场景里同一格 BuildSite 的触发器负责走进区域显示升级消耗与按键。")]
+    [Tooltip("If enabled, skips this object's upgrade trigger and prompt; the paired BuildSite trigger shows costs and handles input.")]
     [SerializeField] private bool interactionViaBuildSiteOnly;
 
     [Header("Input")]
-    [Tooltip("Usually the same Interact or Build action as other buildings. Hosted by BuildSite 时改由 BuildSite 的按键处理，此处可不赋值。")]
+    [Tooltip("Usually the same Interact or Build action as other buildings. When hosted by BuildSite, that handles input; may be left empty.")]
     [SerializeField] private InputActionReference upgradeAction;
 
     [Header("Prompt UI (optional)")]
@@ -91,17 +91,17 @@ public class BuildingUpgrade : MonoBehaviour
 
     public int MaxLevel => maxLevel;
 
-    /// <summary>已达最高级，不应再显示升级 UI。</summary>
+    /// <summary>At max level; upgrade UI should stay hidden.</summary>
     public bool IsMaxLevel => currentLevel >= maxLevel;
 
-    /// <summary>UI 与升级判定用的物品，与 <see cref="BuildSite"/> 持有量显示一致时需配置相同 ItemData。</summary>
+    /// <summary>ItemData used for UI and cost checks; match <see cref="BuildSite"/> if showing held counts.</summary>
     public ItemData WoodItem => woodItem;
 
     public ItemData StoneItem => stoneItem;
 
     public ItemData CoinItem => coinItem;
 
-    /// <summary>升级提示标题用名称（与 Inspector structureName 一致）。</summary>
+    /// <summary>Display name for upgrade prompt (matches Inspector structureName).</summary>
     public string StructureDisplayName => structureName;
 
     public bool UsesBuildSiteInteractionOnly => interactionViaBuildSiteOnly;
@@ -193,7 +193,7 @@ public class BuildingUpgrade : MonoBehaviour
         TryUpgrade();
     }
 
-    /// <summary>BuildSite 调用：下一级升级所需资源（已满级则全 0）。</summary>
+    /// <summary>Called by BuildSite: resource cost for the next tier (zeros if maxed).</summary>
     public void GetNextUpgradeCosts(out int wood, out int stone, out int coin)
     {
         if (IsMaxLevel)
@@ -208,8 +208,8 @@ public class BuildingUpgrade : MonoBehaviour
         coin = GetStepCost(costCoinSteps, idx);
     }
 
-    /// <summary>BuildSite 在同一按键下代为扣费升级。</summary>
-    /// <returns>是否成功升级一级。</returns>
+    /// <summary>BuildSite charges the player and upgrades one tier on the same button press.</summary>
+    /// <returns>True if one tier was upgraded.</returns>
     public bool TryUpgradeWithInventory(Inventory inv, out string failReason)
     {
         failReason = null;

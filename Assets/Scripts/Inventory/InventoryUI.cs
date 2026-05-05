@@ -5,21 +5,23 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 背包面板：格子、重量、排序/关闭；拖拽见 <see cref="InventorySlotUI"/>。
+/// Inventory panel: slot grid, weight, sort/close; drag-and-drop in <see cref="InventorySlotUI"/>.
 ///
-/// <b>双面板箱子方案（推荐）：</b>复制一份玩家用的 Inventory Panel，「玩家面板」的 <see cref="playerInventory"/> + <see cref="inventory"/> 都拖玩家身上的
-/// <see cref="Inventory"/>；「箱子面板」可拖场景里某箱子做测试，或<strong>留空</strong>并由 <see cref="BindStorageView"/> 在打开时绑定当前箱子（配合 <see cref="InventoryUiRegistry"/> + 建造的箱子）。
-/// <see cref="ChestInteractionZone"/> 引用两个面板的 <see cref="InventoryUI"/>（或通过 Registry 自动填写），按交互键会同时打开/关闭两个面板，物品可在两面板格子间拖拽搬运。
+/// <b>Dual-panel chest (recommended):</b> duplicate the player's Inventory Panel. On the player panel, set
+/// <see cref="playerInventory"/> and <see cref="inventory"/> to the player's <see cref="Inventory"/>.
+/// On the chest panel, assign a test chest in the scene or leave references empty and use <see cref="BindStorageView"/> when opening
+/// (with <see cref="InventoryUiRegistry"/> and built chests). <see cref="ChestInteractionZone"/> references both <see cref="InventoryUI"/>s;
+/// interact opens/closes both; items can be dragged between panels.
 ///
-/// <b>单面板切换（旧）：</b>仍可用 <see cref="OpenExternalStorage"/> 等在一只面板上切换视图。
+/// <b>Single-panel (legacy):</b> use <see cref="OpenExternalStorage"/> etc. to switch views on one UI.
 /// </summary>
 public class InventoryUI : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("玩家背包（用于 I 键、商人、关闭面板后恢复）。")]
+    [Tooltip("Player bag (I key, merchant, restore after close).")]
     public Inventory playerInventory;
 
-    [Tooltip("当前正在显示的仓库；运行时会在玩家与箱子之间切换，Inspector 里请与 playerInventory 填成同一个以兼容旧场景。")]
+    [Tooltip("Currently displayed inventory; switches between player and chest at runtime. Match playerInventory in Inspector for old scenes.")]
     public Inventory inventory;
 
     [Tooltip("Prefab for one slot (InventorySlotUI on root).")]
@@ -32,7 +34,7 @@ public class InventoryUI : MonoBehaviour
     public TextMeshProUGUI weightText;
 
     [Header("Gold (optional)")]
-    [Tooltip("若赋值：goldText 显示玩家背包里该道具的数量（与商人/建造的「钱」一致）；与 wallet 二选一即可。")]
+    [Tooltip("If set, goldText shows this item's count in the player's bag (same currency as merchant/build). Use either this or wallet.")]
     [SerializeField] ItemData currencyItem;
 
     [Tooltip("Player wallet; leave empty to search on the same object / parents as player inventory.")]
@@ -41,30 +43,30 @@ public class InventoryUI : MonoBehaviour
     [Tooltip("TMP for coin count (e.g. next to an icon).")]
     public TextMeshProUGUI goldText;
 
-    [Header("外部储存 UI（可选）")]
-    [Tooltip("面板标题：随当前视图切换文案。")]
+    [Header("External storage UI (optional)")]
+    [Tooltip("Panel title text; switches with the active view.")]
     public TextMeshProUGUI panelTitleText;
 
     [SerializeField] string playerInventoryTitle = "Inventory";
     [SerializeField] string storageTitle = "Chest";
 
-    [Tooltip("仅在打开某一外部储存时显示：切回玩家背包视图。")]
+    [Tooltip("Shown only with external storage open: switch to player bag view.")]
     public Button showPlayerInventoryButton;
 
-    [Tooltip("仅在打开某一外部储存时显示：切到该储存视图。")]
+    [Tooltip("Shown only with external storage open: switch to chest view.")]
     public Button showStorageButton;
 
-    [Tooltip("查看箱子时：把选中格子整堆能拿多少拿多少到玩家背包。")]
+    [Tooltip("While viewing chest: move selected stack to player bag as much as possible.")]
     public Button withdrawSelectionButton;
 
-    [Tooltip("查看玩家背包且当前有外部储存会话时：把选中格子物品尽量存入外部储存。")]
+    [Tooltip("While viewing player bag with an external session: deposit selected stack into storage.")]
     public Button depositSelectionButton;
 
     [Header("Buttons")]
     [Tooltip("Invokes Inventory.Sort.")]
     public Button sortButton;
 
-    [Tooltip("Closes the inventory panel (calls Close). 在场景里把按钮拖到这里即可。")]
+    [Tooltip("Closes the inventory panel (calls Close). Wire the scene button here.")]
     public Button closeButton;
 
     Inventory _externalStorage;
@@ -74,13 +76,13 @@ public class InventoryUI : MonoBehaviour
 
     private int _selectedSlotIndex = -1;
 
-    /// <summary>当前显示的 <see cref="Inventory"/>（玩家或箱子）。</summary>
+    /// <summary>Inventory currently shown (player or chest).</summary>
     public Inventory CurrentViewInventory => inventory;
 
-    /// <summary>当前交互的外部储存；无则为 null。</summary>
+    /// <summary>Active external storage session, or null.</summary>
     public Inventory ActiveExternalStorage => _externalStorage;
 
-    /// <summary>是否正在显示某外部储存视图。</summary>
+    /// <summary>True when viewing external storage inventory.</summary>
     public bool IsViewingExternalStorage => _externalStorage != null && inventory == _externalStorage;
 
     public int SelectedSlotIndex => _selectedSlotIndex;
@@ -174,7 +176,7 @@ public class InventoryUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 唯一「箱子 UI」在打开任意世界箱子前调用：绑定该箱子的 <see cref="Inventory"/> 并刷新格子（建造生成、多箱子共用一面板时必用）。
+    /// Single chest UI: call before opening any world chest to bind that <see cref="Inventory"/> (built chests, one panel for many chests).
     /// </summary>
     public void BindStorageView(Inventory storage)
     {
@@ -196,14 +198,14 @@ public class InventoryUI : MonoBehaviour
         RefreshAll();
     }
 
-    /// <summary>打开玩家背包视图并显示面板（I 键、商人、训练师等请用这个）。</summary>
+    /// <summary>Opens player bag view and shows the panel (I key, merchant, trainer, etc.).</summary>
     public void OpenPlayerBag()
     {
         SwitchViewTo(playerInventory);
         Open();
     }
 
-    /// <summary>绑定某一外部 <see cref="Inventory"/>（箱子）并显示；若面板已开则只切换视图。</summary>
+    /// <summary>Binds an external <see cref="Inventory"/> (chest) and shows it; if already open, only switches view.</summary>
     public void OpenExternalStorage(Inventory storage)
     {
         if (storage == null)
@@ -220,13 +222,13 @@ public class InventoryUI : MonoBehaviour
             RefreshAll();
     }
 
-    /// <summary>在有外部储存会话时切换到玩家背包格子（不关闭面板）。</summary>
+    /// <summary>With an external session active, switch to player bag without closing.</summary>
     public void ShowPlayerBag()
     {
         SwitchViewTo(playerInventory);
     }
 
-    /// <summary>在有外部储存会话时切换到储存格子。</summary>
+    /// <summary>With an external session active, switch to storage view.</summary>
     public void ShowExternalStorageView()
     {
         if (_externalStorage == null) return;
@@ -292,7 +294,7 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    /// <summary>从当前查看的储存中，将选中格物品尽量转移到玩家背包。</summary>
+    /// <summary>Move as much of the selected stack as possible from the viewed storage into the player bag.</summary>
     public void TryWithdrawSelectedToPlayer()
     {
         if (playerInventory == null || inventory == null || inventory == playerInventory) return;
@@ -309,7 +311,7 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    /// <summary>在查看玩家背包且存在外部储存会话时，将选中格物品尽量存入储存。</summary>
+    /// <summary>While viewing player bag with storage session: deposit selected stack into storage.</summary>
     public void TryDepositSelectedToStorage()
     {
         if (playerInventory == null || _externalStorage == null || inventory != playerInventory) return;
@@ -328,7 +330,7 @@ public class InventoryUI : MonoBehaviour
 
     public bool IsViewingInventory(Inventory inv) => gameObject.activeSelf && inv != null && inventory == inv;
 
-    /// <summary>与 <see cref="Inventory.Slots"/> 数量对齐：多删少建。</summary>
+    /// <summary>Match slot UI count to <see cref="Inventory.Slots"/> — add or remove widgets.</summary>
     void EnsureSlotWidgetsMatchInventory()
     {
         if (inventory == null || slotUIPrefab == null || slotGridParent == null) return;
@@ -353,7 +355,7 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    /// <summary>进范围、建成、升级后刷新 UI。外部（如 StatTrainer 扣费）也可调用。</summary>
+    /// <summary>Refresh after range events, builds, upgrades. External callers (e.g. StatTrainer spend) may call this.</summary>
     public void RefreshAll()
     {
         EnsureSlotWidgetsMatchInventory();
@@ -425,7 +427,7 @@ public class InventoryUI : MonoBehaviour
         ApplySelectionVisuals();
     }
 
-    /// <summary>拖拽等操作后清除所有 <see cref="InventoryUI"/> 的选中状态（含未激活对象）。</summary>
+    /// <summary>Clear selection on every <see cref="InventoryUI"/> (including inactive).</summary>
     public static void ClearSelectionEverywhere()
     {
         foreach (var ui in Object.FindObjectsByType<InventoryUI>(FindObjectsInactive.Include, FindObjectsSortMode.None))
@@ -441,7 +443,7 @@ public class InventoryUI : MonoBehaviour
             _slotUIs[i].SetSelected(i == _selectedSlotIndex);
     }
 
-    /// <summary>保持当前视图，仅显示面板（一般请用 <see cref="OpenPlayerBag"/>）。</summary>
+    /// <summary>Show panel with current view (prefer <see cref="OpenPlayerBag"/>).</summary>
     public void Open()
     {
         gameObject.SetActive(true);
@@ -449,7 +451,7 @@ public class InventoryUI : MonoBehaviour
         RefreshAll();
     }
 
-    /// <summary>关闭面板并结束外部储存会话，监听始终回到玩家背包。</summary>
+    /// <summary>Close panel and end external storage; listeners return to player bag.</summary>
     public void Close()
     {
         if (inventory != null)

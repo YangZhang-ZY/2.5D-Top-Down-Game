@@ -4,8 +4,8 @@ using UnityEngine.EventSystems;
 using TMPro;
 
 /// <summary>
-/// Single inventory slot UI: icon, stack count, 点击选中、拖拽与其它格子（含另一只 <see cref="InventoryUI"/> 面板）交互动货。
-/// 拖拽时用本格及其子物体上所有 <see cref="Graphic"/> 的 raycast 开关代替 CanvasGroup，避免 MissingComponentException。
+/// Single inventory slot UI: icon, stack count, click to select, drag-and-drop to exchange with other slots (including a second <see cref="InventoryUI"/> panel).
+/// While dragging, toggles raycast on this slot's <see cref="Graphic"/>s instead of CanvasGroup to avoid MissingComponentException.
 /// </summary>
 public class InventorySlotUI : MonoBehaviour,
     IPointerClickHandler,

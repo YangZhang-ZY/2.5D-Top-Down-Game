@@ -4,23 +4,23 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    // ==================== 属性配置（Inspector 可调） ====================
+    // ==================== Inspector-tunable settings ====================
 
     [Header("Movement")]
     public float MoveSpeed = 5.0f;
 
-    [Tooltip("开启后，WASD 沿「摄像机在 XY 行走平面上」的左右/上下移动；转镜头后按键相对屏幕不变。关闭则用世界 XY。")]
+    [Tooltip("If true, WASD is camera-relative on the XY walk plane. If false, raw world XY.")]
     [SerializeField] bool cameraRelativeMovement = true;
 
-    [Tooltip("Rigidbody2D 在 XY 上移动时与 Camera Pivot 绕 Z 转一致，填 (0,0,1)。")]
+    [Tooltip("Walk plane normal for Rigibody2D XY motion (match camera pivot Z, usually (0,0,1)).")]
     [SerializeField] Vector3 walkPlaneNormal = Vector3.forward;
 
     [Header("Menu / cutscene")]
-    [Tooltip("勾选后不接受移动、攻击、冲刺、回血、格挡等（例如主菜单里摆着的 Player）。")]
+    [Tooltip("If true, ignore move/attack/dash/heal/block input (e.g. menu showcase player).")]
     public bool suppressPlayerInput;
 
 
-    // ==================== 组件引用（Awake 获取） ====================
+    // ==================== Components (filled in Awake) ====================
     public Rigidbody2D rb;
     public Animator animator;
     private PlayerInputSet inputActions;
@@ -50,35 +50,35 @@ public class PlayerController : MonoBehaviour
 
     Health _health;
 
-    [Header("受击 / 击退（统一由受伤进 Hurt 状态，与伤害来源无关）")]
-    [Tooltip("受伤时击退速度大小（世界单位/秒），方向由伤害来源决定")]
+    [Header("Hurt / knockback (enters Hurt state; source-agnostic)")]
+    [Tooltip("Knockback speed magnitude (world units/sec); direction from damage.")]
     public float hurtKnockbackSpeed = 6f;
-    [Tooltip("硬直时间：与击退保持时间一致，期间锁输入并播放受击动画")]
+    [Tooltip("Hitstun duration; matches knockback hold; locks input and plays hurt anim.")]
     public float hurtStateDuration = 0.28f;
-    [Tooltip("Animator 受击 Trigger 名（空则不调）")]
+    [Tooltip("Animator hurt trigger name. Empty = do not set.")]
     public string hurtHitAnimTrigger = "Hit";
-    [Tooltip("受击状态结束后开始的无敌时间（秒），与 Health.invincibleDuration 无关")]
+    [Tooltip("Invincibility after hurt ends (seconds); separate from Health.invincibleDuration.")]
     public float postHurtInvincibilityDuration = 0.5f;
 
-    [Header("死亡")]
-    [Tooltip("进入死亡状态后 Animator Bool 置为 true（如 IsDead）；空则不调")]
+    [Header("Death")]
+    [Tooltip("Animator bool set true on death (e.g. IsDead). Empty = do not set.")]
     public string deathAnimBoolParam = "IsDead";
 
-    [Header("回血（背包消耗品）")]
-    [Tooltip("读条期间按此键尝试使用消耗品（可在本组件上改键）")]
+    [Header("Heal (inventory consumable)")]
+    [Tooltip("During channel, press this key to try consuming the item.")]
     public Key healKey = Key.H;
-    [Tooltip("使用时检查并扣除的 ItemData（拖入资源）")]
+    [Tooltip("ItemData checked and removed from inventory.")]
     public ItemData healConsumableItem;
-    [Tooltip("读条结束后恢复的生命值（Health.Heal）")]
+    [Tooltip("HP restored when channel completes (Health.Heal).")]
     [Min(1)]
     public int healHpAmount = 2;
-    [Tooltip("每次使用扣除的数量")]
+    [Tooltip("Items removed per use.")]
     [Min(1)]
     public int healItemConsumeCount = 1;
-    [Tooltip("读条时间（秒），期间锁输入、无法移动")]
+    [Tooltip("Channel time (seconds); locks input and movement.")]
     [Min(0.01f)]
     public float healChannelDuration = 1.5f;
-    [Tooltip("读条期间 Animator Bool 为 true（退出时自动 false），如 IsHealing；空则不调动画")]
+    [Tooltip("Animator bool true while channeling (cleared on exit), e.g. IsHealing. Empty = no anim.")]
     public string healAnimBoolParam = "";
 
     public bool pendingDeath { get; private set; }
@@ -95,7 +95,7 @@ public class PlayerController : MonoBehaviour
 
 
 
-    // ==================== 供状态和转换条件使用的属性 ====================
+    // ==================== State / transition inputs ====================
     public Vector2 Moveinput;
     public bool IsMoving => Moveinput.sqrMagnitude > 0.01f;
     public Vector2 LastMoveDiraction = Vector2.down;
@@ -104,11 +104,11 @@ public class PlayerController : MonoBehaviour
     public float attackCoolDown = 0.05f;
 
     public bool wantAttack { get; private set; }
-    /// <summary>冷却和恢复都结束时可攻击。冲刺不刷新攻击顺序。</summary>
+    /// <summary>True when cooldown and recovery allow attack. Dash does not reset combo index.</summary>
     public bool canAttack => attackCoolDownTimer <= 0f && _attackRecoveryTimer <= 0f;
     public bool attackFinished { get; set; }
 
-    /// <summary>攻击顺序索引（1,2,3...），下次按下攻击将执行该段。冲刺不重置。</summary>
+    /// <summary>Combo step index (1-based). Next attack uses this step. Dash does not reset.</summary>
     public int attackSequenceIndex { get; set; } = 1;
 
     private float attackCoolDownTimer;
@@ -120,33 +120,33 @@ public class PlayerController : MonoBehaviour
     [System.Serializable]
     public class AttackStepConfig
     {
-        [Tooltip("本段攻击动画时长")]
+        [Tooltip("This attack segment duration.")]
         public float duration = 0.35f;
-        [Tooltip("本段攻击结束后，多久后才能按下一次攻击")]
+        [Tooltip("Time after this segment before the next attack input is accepted.")]
         public float recoveryTime = 0.3f;
-        [Tooltip("攻击时沿朝向的瞬时前冲距离，0=无位移")]
+        [Tooltip("Instant lunge along facing; 0 = none.")]
         public float lungeDistance = 0f;
-        [Tooltip("本段攻击造成的伤害值")]
+        [Tooltip("Damage for this segment.")]
         public float attackDamage = 1f;
-        [Tooltip("已废弃：玩家攻击不再施加击退，Hitbox 始终传 0。保留字段仅为避免序列化丢数据")]
+        [Tooltip("Deprecated: player attacks do not apply knockback; hitbox passes 0. Kept for serialization.")]
         public float knockbackForce = 0f;
-        [Tooltip("本段攻击 Hitbox 相对玩家的偏移距离（朝攻击方向）。未启用分方向时使用")]
+        [Tooltip("Hitbox offset along attack direction when per-direction offsets are off.")]
         public float hitboxOffset = 0.5f;
-        [Tooltip("勾选后，上下左右(WASD)使用各自的 Hitbox 偏移")]
+        [Tooltip("If true, use separate offsets per WASD direction.")]
         public bool usePerDirectionOffsets = false;
-        [Tooltip("朝上(W)攻击时的 Hitbox 偏移")]
+        [Tooltip("Hitbox offset when attacking up (W).")]
         public float hitboxOffsetUp = 0.5f;
-        [Tooltip("朝下(S)攻击时的 Hitbox 偏移")]
+        [Tooltip("Hitbox offset when attacking down (S).")]
         public float hitboxOffsetDown = 0.5f;
-        [Tooltip("朝左(A)攻击时的 Hitbox 偏移")]
+        [Tooltip("Hitbox offset when attacking left (A).")]
         public float hitboxOffsetLeft = 0.5f;
-        [Tooltip("朝右(D)攻击时的 Hitbox 偏移")]
+        [Tooltip("Hitbox offset when attacking right (D).")]
         public float hitboxOffsetRight = 0.5f;
 
-        [Tooltip("本段挥刀音效；留空则用 Player 上的默认攻击音效。")]
+        [Tooltip("Swing SFX for this segment; empty uses player default attack sound.")]
         public AudioClip swingSound;
 
-        /// <summary>根据攻击方向返回对应的 Hitbox 偏移</summary>
+        /// <summary>Hitbox offset for the given attack direction.</summary>
         public float GetHitboxOffsetForDirection(Vector2 dir)
         {
             if (!usePerDirectionOffsets) return hitboxOffset;
@@ -158,11 +158,11 @@ public class PlayerController : MonoBehaviour
     }
 
     [Header("Dash")]
-    [Tooltip("冲刺位移距离")]
+    [Tooltip("Dash travel distance.")]
     public float dashDistance = 5f;
-    [Tooltip("冲刺持续时间")]
+    [Tooltip("Dash duration.")]
     public float dashDuration = 0.1f;
-    [Tooltip("冲刺冷却时间")]
+    [Tooltip("Dash cooldown.")]
     public float dashCooldown = 1f;
 
     public bool wantDash { get; private set; }
@@ -171,7 +171,7 @@ public class PlayerController : MonoBehaviour
     private float _dashCooldownTimer;
     public void SetDashCooldown(float duration) => _dashCooldownTimer = duration;
 
-    /// <summary>无敌状态，冲刺时 true，后续受伤逻辑可据此判断</summary>
+    /// <summary>Invincibility flag; true during dash (damage logic may read this).</summary>
     public bool IsInvincible { get; set; }
 
     [Header("Attack Sequence")]
@@ -181,43 +181,43 @@ public class PlayerController : MonoBehaviour
         new AttackStepConfig { duration = 0.35f, recoveryTime = 0.3f, lungeDistance = 0.35f, attackDamage = 2f, knockbackForce = 0f, hitboxOffset = 0.6f },
     };
 
-    [Header("攻击碰撞")]
-    [Tooltip("攻击碰撞盒（玩家子物体，带 Collider2D 的 Trigger）")]
+    [Header("Attack hitbox")]
+    [Tooltip("Child with Collider2D trigger.")]
     public AttackHitbox attackHitbox;
 
-    [Header("攻击音效")]
-    [Tooltip("每段挥刀默认音效；可在下方 Attack Sequence 各段里用 Swing Sound 覆盖。")]
+    [Header("Attack audio")]
+    [Tooltip("Default swing sound; override per segment below with Swing Sound.")]
     [SerializeField] AudioClip attackSwingSound;
     [SerializeField, Range(0f, 1f)] float attackSwingVolume = 1f;
-    [Tooltip("可选；不拖则用本物体上 AudioSource，再没有则生成临时 2D 音源播放一次。")]
+    [Tooltip("Optional. Else uses AudioSource on this object; else spawns a one-shot 2D source.")]
     [SerializeField] AudioSource attackSwingAudioSource;
 
-    [Header("格挡")]
-    [Tooltip("按下后开始格挡并持续这么多秒")]
+    [Header("Block")]
+    [Tooltip("Hold block for this many seconds after press.")]
     [Min(0.05f)]
     public float blockDuration = 1.2f;
-    [Tooltip("格挡结束后冷却")]
+    [Tooltip("Cooldown after block ends.")]
     public float blockCooldown = 0.35f;
-    [Tooltip("格挡键（新输入系统 Key）")]
+    [Tooltip("Block key (Input System Key).")]
     public Key blockKey = Key.R;
-    [Tooltip("格挡时 Animator Bool（如 IsBlocking / Shield）；空则不调")]
+    [Tooltip("Animator bool while blocking (e.g. IsBlocking). Empty = skip.")]
     public string blockShieldAnimBoolParam = "IsBlocking";
-    [Header("格挡成功：下一次攻击的大爆炸")]
-    [Tooltip("预制体可纯特效；若要伤害请挂 AreaDamageBurst2D（仅对带 Enemy 标签的目标造成伤害，由脚本在生成时开启）")]
+    [Header("Block success: big attack explosion")]
+    [Tooltip("Prefab VFX or AreaDamageBurst2D; only damages Enemy-tagged targets (set when spawned).")]
     public GameObject blockExplosionPrefab;
-    [Tooltip("爆炸生成点相对玩家位置的偏移；勾选下面一项时为本地 XY（随物体旋转）")]
+    [Tooltip("Spawn offset from player. See local toggle below.")]
     public Vector2 blockExplosionSpawnOffset;
-    [Tooltip("为 true 时偏移按本 Transform 的旋转映射到世界方向（例如本地 +X 朝角色面向）")]
+    [Tooltip("If true, offset is in local XY (follows rotation / facing).")]
     public bool blockExplosionSpawnOffsetLocal;
 
     public bool wantBlock { get; private set; }
     public bool blockFinished { get; set; }
     public float blockStateTimer { get; set; }
-    /// <summary>格挡挡下敌人伤害后，下一次攻击会消耗并生成爆炸。</summary>
+    /// <summary>After a successful block vs enemy damage, next attack consumes this and spawns the explosion.</summary>
     public bool HasChargedExplosionForNextAttack { get; private set; }
 
     [Header("Debug")]
-    [Tooltip("勾选后，每次切换状态会在 Console 打印")]
+    [Tooltip("If true, log state changes to the Console.")]
     public bool debugStateMachine = false;
 
     float _contactKnockbackUntil;
@@ -228,7 +228,7 @@ public class PlayerController : MonoBehaviour
 #endif
 
     /// <summary>
-    /// 输入被锁时（受击硬直）每帧会把速度清零；接触伤击退由此处登记，在 <see cref="LateUpdate"/> 里覆盖状态机写入的速度。
+    /// When input is locked (hurt stun) velocity is cleared each frame. Contact knockback is registered here and applied in <see cref="LateUpdate"/> over state-machine velocity.
     /// </summary>
     public void ApplyContactKnockback(Vector2 worldVelocity, float holdSeconds)
     {
@@ -239,7 +239,7 @@ public class PlayerController : MonoBehaviour
     }
 
 
-    // ==================== Unity 生命周期 ====================
+    // ==================== Unity lifecycle ====================
 
 
 
@@ -279,7 +279,7 @@ public class PlayerController : MonoBehaviour
 
     void OnPlayerDeath() => pendingDeath = true;
 
-    /// <summary>是否已在死亡状态（避免死亡全局转换每帧重复 Enter）。</summary>
+    /// <summary>True if already in death state (avoid global death transition re-entering every frame).</summary>
     public bool IsCurrentStateDeath() => stateMachine != null && stateMachine.CurrentState is PlayerDeathState;
 
     public bool IsCurrentStateBlock() => stateMachine != null && stateMachine.CurrentState is PlayerBlockState;
@@ -295,9 +295,9 @@ public class PlayerController : MonoBehaviour
 
     public void SetBlockCooldown(float seconds) => _blockCooldownTimer = Mathf.Max(0f, seconds);
 
-    // ==================== NPC 属性强化（StatTrainer 等） ====================
+    // ==================== NPC stat upgrades (StatTrainer, etc.) ====================
 
-    /// <summary>增加最大生命与当前生命（与 <see cref="Health.AddMaxHP"/> 相同）。</summary>
+    /// <summary>Add max and current HP (same as <see cref="Health.AddMaxHP"/>).</summary>
     public void ApplyTrainerBonusMaxHp(int delta)
     {
         if (delta <= 0) return;
@@ -306,14 +306,14 @@ public class PlayerController : MonoBehaviour
         _health.AddMaxHP(delta);
     }
 
-    /// <summary>永久增加移动速度（可多次叠加）。</summary>
+    /// <summary>Permanent move speed bonus (stacks).</summary>
     public void ApplyTrainerBonusMoveSpeed(float delta)
     {
         if (Mathf.Approximately(delta, 0f)) return;
         MoveSpeed = Mathf.Max(0.1f, MoveSpeed + delta);
     }
 
-    /// <summary>为每一段普攻连招增加固定伤害。</summary>
+    /// <summary>Add flat damage to every basic-attack step.</summary>
     public void ApplyTrainerBonusAttackDamageAllSteps(float delta)
     {
         if (Mathf.Approximately(delta, 0f) || attackSteps == null || attackSteps.Length == 0) return;
@@ -321,7 +321,7 @@ public class PlayerController : MonoBehaviour
             attackSteps[i].attackDamage = Mathf.Max(0.01f, attackSteps[i].attackDamage + delta);
     }
 
-    /// <summary>能否开始背包回血读条：有物品、未满血、未死。</summary>
+    /// <summary>True if heal channel can start: has item, not full HP, alive.</summary>
     public bool CanStartHeal()
     {
         if (_health == null || _health.IsDead) return false;
@@ -381,7 +381,7 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
-    /// <summary>在攻击开始时调用：若格挡充能存在则生成爆炸并清除标记。</summary>
+    /// <summary>On attack start: if block charge is ready, spawn explosion and clear flag.</summary>
     public void TryConsumeChargedExplosionOnAttack()
     {
         if (!HasChargedExplosionForNextAttack)
@@ -392,7 +392,7 @@ public class PlayerController : MonoBehaviour
             if (!_hasWarnedBlockExplosionPrefab)
             {
                 _hasWarnedBlockExplosionPrefab = true;
-                Debug.LogWarning("[PlayerController] 格挡已充能大爆炸，但未指定 blockExplosionPrefab（Inspector）.", this);
+                Debug.LogWarning("[PlayerController] Block charged explosion ready but blockExplosionPrefab is not assigned (Inspector).", this);
             }
 #endif
             return;
@@ -415,7 +415,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    /// <summary>每段攻击开始时：<see cref="AttackStepConfig.swingSound"/> 优先，否则 <see cref="attackSwingSound"/>。</summary>
+    /// <summary>Per-attack swing: <see cref="AttackStepConfig.swingSound"/> first, else <see cref="attackSwingSound"/>.</summary>
     public void PlayAttackSwingSound(int stepIndex1Based)
     {
         AudioClip clip = null;
@@ -440,7 +440,7 @@ public class PlayerController : MonoBehaviour
         Destroy(temp, clip.length + 0.05f);
     }
 
-    /// <summary>受击状态结束时调用：从这一刻起刷新无敌计时（默认 0.5s，见 postHurtInvincibilityDuration）。</summary>
+    /// <summary>Call when hurt state ends: starts post-hurt invincibility (default 0.5s, see postHurtInvincibilityDuration).</summary>
     public void ApplyPostHurtInvincibility()
     {
         if (postHurtInvincibilityDuration <= 0f) return;
@@ -466,7 +466,7 @@ public class PlayerController : MonoBehaviour
 
         stateMachine.AddGlobalTransition(deathState, ctx => ctx.pendingDeath && !ctx.IsCurrentStateDeath());
         stateMachine.AddGlobalTransition(hurtState, ctx => ctx.pendingHurt);
-        // 冲刺可从任意状态打断（含攻击）；死亡与受击优先
+        // Dash can interrupt from most states; death and hurt take priority.
         stateMachine.AddGlobalTransition(dashState, ctx => ctx.wantDash && ctx.canDash);
         stateMachine.AddGlobalTransition(blockState, ctx => ctx.wantBlock && ctx.CanEnterBlock());
         stateMachine.AddTransition(dashState, idleState, ctx => ctx.dashFinished);
@@ -477,7 +477,7 @@ public class PlayerController : MonoBehaviour
         stateMachine.AddTransition(idleState, healState, ctx => ctx.wantHeal && ctx.CanStartHeal());
         stateMachine.AddTransition(moveState, healState, ctx => ctx.wantHeal && ctx.CanStartHeal());
 
-        // 攻击优先于 idle/move 互切：wantAttack 仅在按下当帧为 true，否则会被 IsMoving 抢走导致进不了攻击（格挡充能爆炸不触发）。
+        // Attack before idle/move swap: wantAttack is only true on press frame; IsMoving would steal transition otherwise.
         stateMachine.AddTransition(idleState, attackState, ctx => ctx.wantAttack && ctx.canAttack);
         stateMachine.AddTransition(moveState, attackState, ctx => ctx.wantAttack && ctx.canAttack);
         stateMachine.AddTransition(idleState, moveState, ctx => ctx.IsMoving);
@@ -516,7 +516,7 @@ public class PlayerController : MonoBehaviour
 
             //Attack
             wantAttack = inputActions.Player.Attack.WasPressedThisFrame();
-            //Dash（Space 键，Input Actions 重新生成后可用 FindAction）
+            // Dash (Space; use FindAction if Input Actions were regenerated)
             var dashAction = inputActions.Player.Get().FindAction("Dash", throwIfNotFound: false);
             wantDash = dashAction != null ? dashAction.WasPressedThisFrame() : Keyboard.current?.spaceKey.wasPressedThisFrame ?? false;
             wantHeal = Keyboard.current != null && Keyboard.current[healKey].wasPressedThisFrame;
@@ -535,7 +535,7 @@ public class PlayerController : MonoBehaviour
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame)
         {
             string stateName = stateMachine.CurrentState?.GetType().Name ?? "null";
-            Debug.Log($"[StateMachine] 当前状态: {stateName}");
+            Debug.Log($"[StateMachine] Current state: {stateName}");
         }
 
         stateMachine.Update(Time.deltaTime);
@@ -556,7 +556,7 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// 将归一化输入方向（与 Input System 的 Movement 轴向一致）映射到世界 XY 上的单位方向，用于 <see cref="Rigidbody2D.linearVelocity"/> 等。
+    /// Maps normalized input (Input System Movement axes) to a unit direction on world XY for <see cref="Rigidbody2D.linearVelocity"/>.
     /// </summary>
     public Vector2 TransformMoveInputToWorldPlanar(Vector2 normalizedInput)
     {

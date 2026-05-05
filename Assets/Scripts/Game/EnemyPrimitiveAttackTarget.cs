@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 挂在围墙、防御塔、水晶等可被近战敌人优先拆毁的物体上。
-/// 需配合 <see cref="Health"/> 与可用于命中的 <see cref="Collider2D"/>（可与 Health 同物体或子物体）。
-/// Chase 系近战敌人会优先走向<strong>距离自己最近</strong>的存活目标，而不是只盯着远处的水晶。
+/// Put on walls, turrets, crystals, and other structures melee chasers should tear down first.
+/// Requires <see cref="Health"/> and a hittable <see cref="Collider2D"/> (same object or child).
+/// Chase melee AI prefers the <strong>nearest alive</strong> primitive target instead of only the distant crystal.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
@@ -12,7 +12,7 @@ public class EnemyPrimitiveAttackTarget : MonoBehaviour
 {
     static readonly List<EnemyPrimitiveAttackTarget> Instances = new();
 
-    [Tooltip("用于算距离与攻击朝向的点（例如 Collider 中心）。不填则用本物体 Transform。")]
+    [Tooltip("Aim point for range and facing (e.g. collider center). If empty, uses this object's transform.")]
     [SerializeField] Transform aimPoint;
 
     Health _health;
@@ -36,7 +36,7 @@ public class EnemyPrimitiveAttackTarget : MonoBehaviour
         Instances.Remove(this);
     }
 
-    /// <summary>可被 AI 选中（激活且未因血量死亡）。</summary>
+    /// <summary>Selectable by AI if active and not dead by health.</summary>
     public bool IsAliveTarget() =>
         isActiveAndEnabled && _health != null && !_health.IsDead;
 
@@ -44,7 +44,7 @@ public class EnemyPrimitiveAttackTarget : MonoBehaviour
     public static EnemyPrimitiveAttackTarget FindForTransform(Transform t) =>
         t != null ? t.GetComponentInParent<EnemyPrimitiveAttackTarget>() : null;
 
-    /// <summary>离 <paramref name="from"/> 最近的存活 primitive 锚点 Transform；没有则 null。</summary>
+    /// <summary>Nearest alive primitive aim transform to <paramref name="from"/>; null if none.</summary>
     public static Transform GetNearestAimTransform(Vector3 from)
     {
         EnemyPrimitiveAttackTarget best = null;

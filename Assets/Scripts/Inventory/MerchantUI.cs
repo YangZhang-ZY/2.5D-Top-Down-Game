@@ -35,7 +35,7 @@ public class MerchantUI : MonoBehaviour
     public InventoryUI inventoryUI;
 
     [Header("Currency")]
-    [Tooltip("若赋值：以玩家背包中该道具的数量为「钱」（与 ItemData 金币道具一致）；不赋值则使用 PlayerWallet。")]
+    [Tooltip("If set, that item count in the player's bag is currency (same Coin ItemData as shops). If empty, uses PlayerWallet.")]
     [SerializeField] ItemData currencyItem;
     public PlayerWallet wallet;
     public TextMeshProUGUI goldText;

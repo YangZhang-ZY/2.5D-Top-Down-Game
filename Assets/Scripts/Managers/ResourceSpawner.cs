@@ -3,10 +3,10 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// 每个白天开始时（<see cref="DayNightManager.OnDayStart"/>）以及场景 <see cref="Start"/> 时，
-/// 按每条目的 <see cref="ResourceEntry.spawnPerDay"/> 在三个环带内补充实例，总数不超过 <see cref="ResourceEntry.maxCount"/>。
-/// 已采集/销毁的实例会从追踪列表移除，下一天可继续补到上限。
-/// 不在建造安全半径内采样；可选排除区。
+/// Each day start (<see cref="DayNightManager.OnDayStart"/>) and on scene <see cref="Start"/>,
+/// spawns up to <see cref="ResourceEntry.spawnPerDay"/> per entry inside three rings, capped by <see cref="ResourceEntry.maxCount"/>.
+/// Destroyed/gathered instances leave the tracked list so the next day can refill to the cap.
+/// Avoids sampling inside build safe radius; optional exclusion zones.
 /// </summary>
 public class ResourceSpawner : MonoBehaviour
 {
@@ -16,12 +16,12 @@ public class ResourceSpawner : MonoBehaviour
         [Tooltip("Prefab to spawn (trees, rocks, chests, etc.).")]
         public GameObject prefab;
 
-        [Tooltip("每天最多新生成的数量（直到达到 maxCount 为止）。场景第一次 Start 也算一次补充。")]
+        [Tooltip("Max new spawns per day until maxCount. First scene Start counts as one refill.")]
         [Min(0)]
         [FormerlySerializedAs("weight")]
         public int spawnPerDay = 1;
 
-        [Tooltip("该条目在本环中带存在的上限（达到后当天不再增加）。")]
+        [Tooltip("Max concurrent instances of this entry in this ring (no more spawns that day once reached).")]
         [Min(1)]
         public int maxCount = 5;
 
@@ -38,7 +38,7 @@ public class ResourceSpawner : MonoBehaviour
         [Tooltip("Outer radius (farthest distance to center).")]
         public float outerRadius = 15f;
 
-        [Tooltip("本环内的资源条目列表。")]
+        [Tooltip("Resource entries spawned in this ring.")]
         public List<ResourceEntry> entries = new();
     }
 

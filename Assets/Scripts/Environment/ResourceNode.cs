@@ -22,10 +22,10 @@ public class ResourceNode : MonoBehaviour
     [Min(1)]
     public int dropCountMax = 3;
 
-    [Tooltip("相对掉落原点（本物体或 Drop Position）的水平偏移（XY）。")]
+    [Tooltip("Horizontal offset (XY) from drop origin (this object or Drop Position transform).")]
     public Vector2 spawnOffset;
 
-    [Tooltip("场景中摆好位置的空物体（可拖子物体）；掉落从该 Transform 的世界坐标起算，再叠加 Spawn Offset 与随机 spread。留空则用本物体位置。")]
+    [Tooltip("Empty at the desired world point (can be a child). Drops use this position plus Spawn Offset and spread. If empty, uses this object.")]
     public Transform dropPosition;
 
     [Tooltip("Random horizontal spread so multiple drops do not overlap.")]

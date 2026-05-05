@@ -3,14 +3,14 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 鼠标悬停时略微放大按钮，移出后恢复。需挂在带 <see cref="Button"/> 且能接收指针的物体上（通常与 Button 同节点）。
-/// 也可由 <see cref="UIGlobalButtonFeedback"/> 在运行时自动添加。
+/// Slightly scales up a button on hover; restores scale on exit. Put on the same GameObject as a <see cref="Button"/> that receives pointer events.
+/// May be added at runtime by <see cref="UIGlobalButtonFeedback"/>.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Button))]
 public class UIButtonHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    [Tooltip("相对原始 localScale 的悬停倍数，例如 1.06")]
+    [Tooltip("Hover scale multiplier relative to original localScale (e.g. 1.06).")]
     [SerializeField] [Min(1f)] float hoverMultiplier = 1.06f;
 
     Button _button;

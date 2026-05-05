@@ -1,22 +1,22 @@
 using UnityEngine;
 
 /// <summary>
-/// 一次性范围伤害：生成时对圆形内带 <see cref="IDamageable"/> 的目标各打一次伤害，之后可按延迟销毁。
-/// 用于格挡成功后的「大爆炸」预制体；可不挂本组件，仅做特效。
+/// One-shot circular burst: on spawn, damages each <see cref="IDamageable"/> in radius once, then optionally destroys after a delay.
+/// For the block-success explosion prefab; can be omitted if the prefab is VFX-only.
 /// </summary>
 public class AreaDamageBurst2D : MonoBehaviour
 {
-    [Tooltip("伤害半径（世界单位）")]
+    [Tooltip("Damage radius in world units.")]
     public float radius = 4f;
     [Tooltip("伤害数值")]
     public float damage = 30f;
-    [Tooltip("几秒后销毁整个物体（粒子可设得略长）")]
+    [Tooltip("Destroy entire GameObject after this many seconds (particles can run slightly longer).")]
     public float destroyAfterSeconds = 2f;
 
-    [Tooltip("为 true 时仅伤害：从自身到根节点任一层级带了 Enemy 标签的物体（格挡大爆炸由 PlayerController 自动开启）")]
+    [Tooltip("If true, only damages hierarchies that have the Enemy tag on self-to-root (block explosion enables this automatically).")]
     public bool onlyDamageEnemyTag;
 
-    /// <summary>由 <see cref="PlayerController"/> 在生成后赋值，用于排除自伤</summary>
+    /// <summary>Set by <see cref="PlayerController"/> after spawn to exclude self-damage.</summary>
     public GameObject damageSource;
 
     void Start()

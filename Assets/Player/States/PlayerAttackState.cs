@@ -2,8 +2,8 @@ using StateMachine;
 using UnityEngine;
 
 /// <summary>
-/// 玩家攻击状态：攻击顺序制，无连击窗口。每段攻击单独按键，按 attackSequenceIndex 执行。
-/// 依赖 PlayerController：attackSteps、attackSequenceIndex、attackFinished、LastMoveDiraction、animator、rb
+/// Player attack state: fixed combo sequence, no buffering window. Each step uses a separate button press; runs the step at <see cref="PlayerController.attackSequenceIndex"/>.
+/// Depends on PlayerController: attackSteps, attackSequenceIndex, attackFinished, LastMoveDiraction, animator, rb.
 /// </summary>
 public class PlayerAttackState : StateBase<PlayerController>
 {
@@ -28,7 +28,7 @@ public class PlayerAttackState : StateBase<PlayerController>
     }
 
     /// <summary>
-    /// 开始指定段数的攻击，设置计时器、位移、Animator 参数
+    /// Starts the attack step at index <paramref name="step"/>: timer, optional lunge, Animator params, hitbox.
     /// </summary>
     private void StartStep(PlayerController ctx, int step)
     {

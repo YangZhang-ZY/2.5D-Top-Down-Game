@@ -17,14 +17,14 @@ public class ClearTilemapLayerEditor : Editor
         if (Application.isPlaying)
         {
             EditorGUILayout.HelpBox(
-                "当前在运行模式：在这里清除只会改「试玩内存」，停止运行后 Tilemap 会按磁盘上的场景还原。\n\n" +
-                "要永久擦掉：先停止运行，再用下方按钮或组件右键菜单清除，然后 Ctrl+S 保存场景。",
+                "Play mode: clearing here only changes play-session memory. Stopping restores the Tilemap from disk.\n\n" +
+                "To permanently erase: exit Play, use the buttons below or the component context menu, then Ctrl+S save the scene.",
                 MessageType.Warning);
         }
         else
         {
             EditorGUILayout.HelpBox(
-                "编辑模式下清除会标为场景已修改；请按 Ctrl+S 保存场景，之后就会永久生效。",
+                "Edit mode: clearing marks the scene dirty; press Ctrl+S to save so changes persist.",
                 MessageType.Info);
         }
 

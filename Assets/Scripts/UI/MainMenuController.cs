@@ -6,23 +6,22 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 主菜单：加载游戏关卡、退出游戏、播放菜单 BGM。
-/// 按钮 OnClick 绑定 <see cref="StartGame"/> / <see cref="QuitGame"/>；
-/// 将 <see cref="menuMusic"/> 拖入 Inspector 即可在本场景循环播放。
+/// Main menu: load gameplay scene, quit, optional menu BGM.
+/// Wire buttons to <see cref="StartGame"/> / <see cref="QuitGame"/>. Assign <see cref="menuMusic"/> for a looping clip.
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
-    [Tooltip("需在 File → Build Settings → Scenes In Build 中包含此场景")]
+    [Tooltip("Scene name must be listed under File → Build Settings → Scenes In Build.")]
     [SerializeField] string gameSceneName = "TestScene";
 
-    [Tooltip("victory / game over 可能把 timeScale 设为 0，进关卡前恢复")]
+    [Tooltip("Victory / game over may set timeScale to 0; restore before loading.")]
     [SerializeField] bool resetTimeScaleBeforeLoad = true;
 
     [Header("Menu music")]
-    [Tooltip("主菜单循环 BGM；留空则不播。运行时会在本物体上挂/用 AudioSource。")]
+    [Tooltip("Looping BGM for this scene. If empty, no music. Uses or adds AudioSource on this object.")]
     [SerializeField] AudioClip menuMusic;
 
-    [Tooltip("音乐音量")]
+    [Tooltip("Music volume.")]
     [SerializeField] [Range(0f, 1f)] float menuMusicVolume = 0.65f;
 
     [SerializeField] bool playMenuMusicOnStart = true;

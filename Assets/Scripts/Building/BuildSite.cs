@@ -4,9 +4,9 @@ using TMPro;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 建造点：玩家进入触发区显示消耗与虚影，按键建造；建成之后<strong>同一触发区</strong>继续显示
-/// <see cref="BuildingUpgrade"/> 的升级消耗（建筑 prefab 上需勾选 Interaction Via Build Site Only），满级后不再显示面板。
-/// 建筑耐久归零则按修理逻辑重新开放建造。
+/// Build site: player enters trigger to see cost + ghost, presses key to build; the <strong>same trigger</strong> then shows
+/// <see cref="BuildingUpgrade"/> costs (prefab must use Interaction Via Build Site Only). Panel hides when max level is reached.
+/// When built structure Health hits zero, repair flow re-opens construction.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class BuildSite : MonoBehaviour
@@ -49,11 +49,11 @@ public class BuildSite : MonoBehaviour
     [SerializeField] private ItemData coinItem;
 
     [Header("Repair (after built Health reaches 0)")]
-    [Tooltip("修复时各资源消耗 = ceil(对应建造消耗 × 本系数)。0 = 免费修复。")]
+    [Tooltip("Repair cost per resource = ceil(matching build cost × this). 0 = free repair.")]
     [SerializeField] [Range(0f, 1f)] private float repairCostMultiplier = 0.5f;
 
-    [Tooltip("提示里修复行动的前缀（如「修复」）。")]
-    [SerializeField] private string repairPromptPrefix = "修复";
+    [Tooltip("Prefix for repair prompts (e.g. \"Repair\").")]
+    [SerializeField] private string repairPromptPrefix = "Repair";
 
     [Header("Input (Input System)")]
     [Tooltip("Input Action Reference for Player/Build.")]
@@ -90,22 +90,22 @@ public class BuildSite : MonoBehaviour
     [SerializeField] private GameObject coinRow;
 
     [Header("Status display (optional)")]
-    [Tooltip("建成且带 BuildingUpgrade：显示「前缀 + 等级」；已满级为「前缀 + Max 文案」。")]
+    [Tooltip("When built with BuildingUpgrade: show prefix + level; at max level show prefix + max string.")]
     [SerializeField] private TextMeshProUGUI currentLevelStatusText;
 
-    [Tooltip("等级数字前的文字，如 \"Level \"（末尾可带空格）。")]
+    [Tooltip("Text before the level number, e.g. \"Level \" (trailing space optional).")]
     [SerializeField] private string levelStatusPrefix = "Level ";
 
-    [Tooltip("已满级时接在前缀后的文案，如 Max。")]
+    [Tooltip("Suffix when max level, e.g. Max.")]
     [SerializeField] private string maxLevelDisplayString = "Max";
 
-    [Tooltip("建成且带 Health：显示「前缀 + 当前/最大」。")]
+    [Tooltip("When built with Health: show prefix + current/max.")]
     [SerializeField] private TextMeshProUGUI builtStructureHealthText;
 
-    [Tooltip("生命值前的文字，如 \"Health \"（末尾可带空格）。")]
+    [Tooltip("Text before HP values, e.g. \"Health \" (trailing space optional).")]
     [SerializeField] private string healthStatusPrefix = "Health ";
 
-    [Tooltip("当前 HP 与最大 HP 之间的分隔符。")]
+    [Tooltip("Separator between current and max HP.")]
     [SerializeField] private string healthHpSeparator = "/";
 
     [Header("Events")]
@@ -117,18 +117,18 @@ public class BuildSite : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool debugLog;
 
-    [Header("Scene 视图调试（仅编辑器）")]
-    [Tooltip("勾选后在 Scene 视图绘制「建成后」的大致包围盒，便于对齐 Spawn Point；调好位置后请取消勾选。运行时不会绘制。")]
+    [Header("Scene view debug (editor only)")]
+    [Tooltip("Draw approx. post-build bounds in Scene to line up Spawn Point; disable when done. Not drawn at runtime.")]
     [SerializeField] private bool showEditorGhostInScene;
 
-    [Tooltip("勾选后仅当选中本物体时绘制，避免场景里多个点一起画满屏。")]
+    [Tooltip("If enabled, draw only when this object is selected (avoids clutter with many sites).")]
     [SerializeField] private bool editorGhostOnlyWhenSelected = true;
 
     [SerializeField] private Color editorGhostWireColor = new Color(0.2f, 1f, 0.45f, 0.95f);
 
     [SerializeField] private Color editorGhostFillColor = new Color(0.2f, 1f, 0.45f, 0.08f);
 
-    [Tooltip("无法从 Prefab 估出包围盒时用的立方体尺寸（世界单位，XY 为主）。")]
+    [Tooltip("Fallback box size in world units (XY) when prefab bounds cannot be estimated.")]
     [SerializeField] private Vector3 editorGhostFallbackSize = new Vector3(2f, 2f, 0.1f);
 
 #if UNITY_EDITOR
@@ -139,13 +139,13 @@ public class BuildSite : MonoBehaviour
     bool _editorGhostCacheValid;
 #endif
 
-    /// <summary>当前是否有存活中的已造建筑（根实例仍存在）。</summary>
+    /// <summary>True when a live built instance root still exists.</summary>
     public bool IsBuilt => _builtInstance != null;
 
-    /// <summary>是否至少成功建造过一次（含修复），用于区分首次建造与灾后修复。</summary>
+    /// <summary>True after at least one successful build (including repair), to distinguish first build vs post-ruin repair.</summary>
     public bool HasBuiltAtLeastOnce => _hasBuiltAtLeastOnce;
 
-    /// <summary>建成实例上的升级组件（可选）；须由 prefab 勾选 <see cref="BuildingUpgrade.UsesBuildSiteInteractionOnly"/>。</summary>
+    /// <summary>Upgrade on the built instance (optional); prefab should enable <see cref="BuildingUpgrade.UsesBuildSiteInteractionOnly"/>.</summary>
     public BuildingUpgrade HostedUpgrade => _hostedUpgrade;
 
     private Collider2D _trigger;
@@ -157,7 +157,7 @@ public class BuildSite : MonoBehaviour
     private bool _hasBuiltAtLeastOnce;
     private BuildingUpgrade _hostedUpgrade;
 
-    /// <summary>进入触发区时那块玩家 Collider（用于补测离开，避免用根物体坐标误判）。</summary>
+    /// <summary>Player collider that entered the trigger (reliable exit test vs root transform).</summary>
     Collider2D _playerZoneCollider;
 
     private void Awake()
@@ -170,7 +170,7 @@ public class BuildSite : MonoBehaviour
 
         if (HasAnyPromptBinding() && promptRoot == null)
             Debug.LogWarning(
-                $"[BuildSite] {name}: Prompt Root 未赋值时，请把整块提示面板拖到 Prompt Root，或在场景里关掉面板默认显示；否则进游戏就会看到数字。",
+                $"[BuildSite] {name}: With prompt bindings but no Prompt Root, assign the full prompt panel to Prompt Root or disable it by default in the scene; otherwise numbers show on play.",
                 this);
 
         if (buildAction == null || buildAction.action == null)
@@ -232,7 +232,7 @@ public class BuildSite : MonoBehaviour
                     RefreshPromptText();
             }
             else if (!string.IsNullOrEmpty(upgradeErr))
-                Debug.LogWarning($"[BuildSite] {name}: 无法升级 — {upgradeErr}", this);
+                Debug.LogWarning($"[BuildSite] {name}: upgrade failed — {upgradeErr}", this);
         }
     }
 
@@ -270,7 +270,7 @@ public class BuildSite : MonoBehaviour
         HidePromptUiOnly();
     }
 
-    /// <summary>只关面板/虚影，不重置「在范围内」状态（例如满级仍站在点里）。</summary>
+    /// <summary>Hide prompt/ghost only; does not clear in-range (e.g. max level while standing inside).</summary>
     void HidePromptUiOnly()
     {
         HideGhostPreview();
@@ -281,7 +281,7 @@ public class BuildSite : MonoBehaviour
             SetOrphanPromptPiecesVisible(false);
     }
 
-    /// <summary>父物体 Prompt Root 打开后，恢复标题/持有量等（曾被无 Root 模式单独 SetActive(false) 的子节点否则会一直不显示）。</summary>
+    /// <summary>After enabling Prompt Root, ensure title/owned labels are active (orphan mode may have disabled children).</summary>
     void PreparePromptRootContentVisible()
     {
         if (titleText != null)
@@ -298,7 +298,7 @@ public class BuildSite : MonoBehaviour
             builtStructureHealthText.gameObject.SetActive(true);
     }
 
-    /// <summary>未拖 Prompt Root 时，直接关掉各 TMP / Row 节点，避免默认激活。</summary>
+    /// <summary>Without Prompt Root, toggle TMP/row nodes directly so defaults are not visible on load.</summary>
     void SetOrphanPromptPiecesVisible(bool visible)
     {
         if (titleText != null)
@@ -330,7 +330,7 @@ public class BuildSite : MonoBehaviour
             ClearOwnedAmountLabels();
     }
 
-    /// <summary>进范围、建成、升级后刷新 UI 与虚影。</summary>
+    /// <summary>Refresh UI and ghost after enter range, build, or upgrade.</summary>
     void ApplyPromptForCurrentState()
     {
         if (!ShouldShowInteractionPrompt(out bool showGhost))
@@ -353,7 +353,7 @@ public class BuildSite : MonoBehaviour
             HideGhostPreview();
     }
 
-    /// <summary>未建成/维修：显示；已建：可升级、或配置了等级/生命显示（含满级看 Max）、或仅生命条。</summary>
+    /// <summary>Not built / repair: show; built: show if upgradable, or status lines (level/HP incl. max), or health-only.</summary>
     bool ShouldShowInteractionPrompt(out bool showGhostPreview)
     {
         showGhostPreview = false;
@@ -383,7 +383,7 @@ public class BuildSite : MonoBehaviour
         return buildAction.action.GetBindingDisplayString();
     }
 
-    /// <summary>刷新建造/修复/升级提示（同一套 Prompt 字段）。</summary>
+    /// <summary>Refresh build/repair/upgrade prompt (same TMP fields).</summary>
     public void RefreshPromptText()
     {
         bool hasBinding = HasAnyPromptBinding();
@@ -439,7 +439,7 @@ public class BuildSite : MonoBehaviour
         RefreshStatusLines();
     }
 
-    /// <summary>等级与生命（与其它 Prompt 文本独立，便于面板单独摆位）。受击/治疗时也会刷新。</summary>
+    /// <summary>Level and HP lines (independent of other prompt text for layout). Also refresh on damage/heal.</summary>
     void RefreshStatusLines()
     {
         if (currentLevelStatusText != null)
@@ -611,15 +611,15 @@ public class BuildSite : MonoBehaviour
         _hostedUpgrade.GetNextUpgradeCosts(out int w, out int s, out int c);
         if (w > 0 && _hostedUpgrade.WoodItem == null)
             Debug.LogWarning(
-                $"[BuildSite] {name}: 升级需要木材但 BuildingUpgrade 未赋值 Wood Item，按键升级会失败。",
+                $"[BuildSite] {name}: upgrade needs wood but BuildingUpgrade Wood Item is not assigned — upgrade will fail.",
                 _hostedUpgrade);
         if (s > 0 && _hostedUpgrade.StoneItem == null)
             Debug.LogWarning(
-                $"[BuildSite] {name}: 升级需要石头但 BuildingUpgrade 未赋值 Stone Item，按键升级会失败。",
+                $"[BuildSite] {name}: upgrade needs stone but BuildingUpgrade Stone Item is not assigned — upgrade will fail.",
                 _hostedUpgrade);
         if (c > 0 && _hostedUpgrade.CoinItem == null)
             Debug.LogWarning(
-                $"[BuildSite] {name}: 升级需要金币但 BuildingUpgrade 未赋值 Coin Item，按键升级会失败。",
+                $"[BuildSite] {name}: upgrade needs coin but BuildingUpgrade Coin Item is not assigned — upgrade will fail.",
                 _hostedUpgrade);
     }
 
@@ -885,7 +885,7 @@ public class BuildSite : MonoBehaviour
         return false;
     }
 
-    /// <summary>与运行时 <see cref="Instantiate"/> 相同摆放，再合并 Bounds，保证 Scene 虚影对齐。</summary>
+    /// <summary>Same placement as runtime <see cref="Instantiate"/>, then merge bounds so Scene ghost lines up.</summary>
     static bool TryComputeWorldBoundsByInstantiatingTemplate(
         GameObject prefab,
         Vector3 worldPos,

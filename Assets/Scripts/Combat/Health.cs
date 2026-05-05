@@ -87,7 +87,7 @@ public class Health : MonoBehaviour, IDamageable
     }
 
     /// <summary>
-    /// 将受击无敌计时设为指定秒数（会覆盖当前剩余时间）。用于受击硬直结束后再给一段无敌。
+    /// Sets post-hit invincibility for the given seconds (replaces any shorter time left). Use after hitstun for extra i-frames.
     /// </summary>
     public void SetInvincibleTimer(float seconds)
     {

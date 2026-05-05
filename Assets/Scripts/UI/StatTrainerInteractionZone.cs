@@ -2,15 +2,15 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 走进触发区按交互键打开 <see cref="StatTrainerUI"/>（可选同时打开背包）。
-/// 与商人类似：需要 Collider2D IsTrigger、Input System 的 Interact/Build 等 Action Reference。
+/// Enter trigger and press interact to open <see cref="StatTrainerUI"/> (optionally opens the bag too).
+/// Same pattern as merchants: trigger Collider2D, Input System Interact/Build Action Reference.
 /// </summary>
 public class StatTrainerInteractionZone : MonoBehaviour
 {
     public StatTrainerUI trainerUI;
     public InventoryUI inventoryUI;
 
-    [Tooltip("例如 Player/Interact 或 Player/Build")]
+    [Tooltip("e.g. Player/Interact or Player/Build")]
     [SerializeField] InputActionReference interactAction;
 
     [SerializeField] string playerTag = "Player";

@@ -2,10 +2,10 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 挂在某一 <see cref="Tilemap"/> 图层上：
-/// - <b>永久清除</b>：在<strong>编辑模式</strong>（未运行）下用 Inspector 按钮或组件右键清除，然后 <strong>Ctrl+S 保存场景</strong>。
-/// - 在 <strong>Play 模式</strong>下清除只会改内存，停止运行会还原；不要用运行模式做地图烘焙。
-/// - 区域由 <see cref="cellsMin"/> + <see cref="cellsSize"/> 指定（本 Tilemap 格子坐标）。
+/// On a <see cref="Tilemap"/>:
+/// - <b>Permanent clear</b>: in <strong>Edit mode</strong> (not playing), use Inspector buttons or component context menu, then <strong>Ctrl+S save scene</strong>.
+/// - In <strong>Play mode</strong>, clear only affects memory; stopping restores tiles — do not bake maps in Play.
+/// - Region = <see cref="cellsMin"/> + <see cref="cellsSize"/> in this Tilemap's cell space.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Tilemap))]

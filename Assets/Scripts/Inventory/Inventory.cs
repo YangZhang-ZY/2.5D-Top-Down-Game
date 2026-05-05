@@ -28,9 +28,9 @@ public class Inventory : MonoBehaviour
     public UnityEvent OnInventoryChanged = new UnityEvent();
 
     [Header("Starting loadout (optional)")]
-    [Tooltip("游戏开始时放入背包的「钱」道具（与商人 / UI 的 currency 填同一 Coin）；箱子等非玩家 Inventory 请留空。")]
+    [Tooltip("Item added to the bag at start (same Coin as merchant/UI currency). Leave empty on chests and non-player inventories.")]
     [SerializeField] ItemData startingCurrencyItem;
-    [Tooltip("初始硬币数量（0 = 不放）。")]
+    [Tooltip("Starting coin count (0 = none).")]
     [Min(0)]
     [SerializeField] int startingCurrencyCount;
 
@@ -95,7 +95,7 @@ public class Inventory : MonoBehaviour
         }
     }
 
-    /// <summary>增加空格子数量（如 NPC 升级背包）。会提升 <see cref="capacity"/> 并触发 <see cref="OnInventoryChanged"/>。</summary>
+    /// <summary>Adds empty slots (e.g. NPC bag upgrade). Increases <see cref="capacity"/> and fires <see cref="OnInventoryChanged"/>.</summary>
     public void ExpandCapacity(int additionalSlots)
     {
         if (additionalSlots <= 0) return;
@@ -382,7 +382,7 @@ public class Inventory : MonoBehaviour
     }
 
     /// <summary>
-    /// UI 拖拽落格：同一背包内移动/合并/交换，或跨背包移动/合并/交换（尊重重量与堆叠上限）。
+    /// UI drag-drop: move/merge/swap within one bag, or between bags (respects weight and stack limits).
     /// </summary>
     public static bool TryDragDropBetweenSlots(Inventory fromInv, int fromIndex, Inventory toInv, int toIndex)
     {
